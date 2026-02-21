@@ -42,4 +42,4 @@ COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
 EXPOSE 3000
-CMD ["sh", "-c", "node prisma/migrate.js 2>&1; node server.js"]
+CMD ["node", "server.js"]
