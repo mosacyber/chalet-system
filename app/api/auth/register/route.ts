@@ -52,9 +52,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Registration error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "حدث خطأ في إنشاء الحساب", details: message },
+      { error: "حدث خطأ في إنشاء الحساب" },
       { status: 500 }
     );
   }
