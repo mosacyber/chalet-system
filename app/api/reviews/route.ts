@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export async function GET() {
-  const reviews = [
-    {
-      id: "1",
-      userId: "user-1",
-      chaletId: "1",
-      rating: 5,
-      comment: "تجربة رائعة!",
-      createdAt: "2024-03-15",
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const limit = Number(url.searchParams.get("limit")) || 20;
+
+  const reviews = await prisma.review.findMany({
+    where: { isVisible: true },
+    include: {
+      user: { select: { name: true } },
+      chalet: { select: { nameAr: true, nameEn: true } },
     },
-  ];
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
 
   return NextResponse.json(reviews);
 }

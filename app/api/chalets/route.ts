@@ -34,12 +34,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Public: only active chalets
+  // Public: only active chalets with review stats
   const chalets = await prisma.chalet.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
+    include: {
+      reviews: { where: { isVisible: true }, select: { rating: true } },
+    },
   });
-  return NextResponse.json(chalets);
+
+  const result = chalets.map((c) => {
+    const avgRating =
+      c.reviews.length > 0
+        ? c.reviews.reduce((sum, r) => sum + r.rating, 0) / c.reviews.length
+        : 0;
+    const { reviews, ...rest } = c;
+    return {
+      ...rest,
+      pricePerNight: Number(c.pricePerNight),
+      weekendPrice: c.weekendPrice ? Number(c.weekendPrice) : null,
+      rating: Math.round(avgRating * 10) / 10,
+      reviewCount: reviews.length,
+    };
+  });
+
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
