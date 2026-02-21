@@ -1,14 +1,12 @@
-FROM node:24-alpine AS base
-
-# Install OpenSSL for Prisma
+FROM node:20-alpine AS base
 RUN apk add --no-cache openssl
 
-# Install dependencies only when needed
+# Install dependencies
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --ignore-scripts
+RUN npm install --legacy-peer-deps
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
 
@@ -17,11 +15,9 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=512"
-
 RUN npm run build
 
 # Production image
@@ -44,7 +40,5 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
-
 EXPOSE 3000
-
 CMD ["node", "server.js"]
