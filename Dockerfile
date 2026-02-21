@@ -43,4 +43,4 @@ COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma db push --skip-generate 2>&1 || true; node server.js"]
+CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js db push --skip-generate 2>&1; node server.js"]
