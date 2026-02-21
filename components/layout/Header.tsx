@@ -15,7 +15,8 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const role = (session?.user as { role?: string })?.role;
+  const hasDashboard = role === "ADMIN" || role === "OWNER";
 
   const navLinks = [
     { href: `/${locale}`, label: t("home"), icon: Home },
@@ -54,7 +55,7 @@ export default function Header() {
           <LanguageSwitcher />
           {isLoggedIn ? (
             <>
-              {isAdmin && (
+              {hasDashboard && (
                 <Link href={`/${locale}/dashboard`}>
                   <Button variant="ghost" size="sm" className="gap-1.5">
                     <LayoutDashboard className="h-4 w-4" />
@@ -136,7 +137,7 @@ export default function Header() {
                         {session?.user?.name}
                       </span>
                     </div>
-                    {isAdmin && (
+                    {hasDashboard && (
                       <Link
                         href={`/${locale}/dashboard`}
                         onClick={() => setOpen(false)}

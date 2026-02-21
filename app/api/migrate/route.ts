@@ -55,6 +55,39 @@ export async function POST(request: Request) {
   }
 }
 
+// PUT: Add OWNER role and ownerId column (v2 migration)
+export async function PUT(request: Request) {
+  const authHeader = request.headers.get("x-migrate-key");
+  if (authHeader !== process.env.NEXTAUTH_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const results: string[] = [];
+
+  const run = async (label: string, sql: string) => {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      results.push(`${label}: OK`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown";
+      if (msg.includes("already exists") || msg.includes("duplicate")) {
+        results.push(`${label}: already exists (skipped)`);
+      } else {
+        results.push(`${label}: ERROR - ${msg}`);
+      }
+    }
+  };
+
+  await run("Add OWNER enum", `ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'OWNER'`);
+  await run("Add ownerId column", `ALTER TABLE "Chalet" ADD COLUMN IF NOT EXISTS "ownerId" TEXT`);
+  await run("Add ownerId FK", `ALTER TABLE "Chalet" ADD CONSTRAINT "Chalet_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE`);
+  await run("Add ownerId index", `CREATE INDEX IF NOT EXISTS "Chalet_ownerId_idx" ON "Chalet"("ownerId")`);
+  await run("Update default role", `ALTER TABLE "User" ALTER COLUMN "role" SET DEFAULT 'OWNER'`);
+  await run("Upgrade CUSTOMER to OWNER", `UPDATE "User" SET "role" = 'OWNER' WHERE "role" = 'CUSTOMER'`);
+
+  return NextResponse.json({ message: "V2 migration complete", results });
+}
+
 // PATCH: Seed admin account (one-time use)
 export async function PATCH(request: Request) {
   const auth = request.headers.get("x-migrate-key");

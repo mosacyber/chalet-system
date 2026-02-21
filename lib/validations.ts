@@ -10,6 +10,7 @@ export const registerSchema = z
     name: z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل"),
     email: z.string().email("البريد الإلكتروني غير صالح"),
     phone: z.string().optional(),
+    chaletName: z.string().min(2, "اسم الشاليه يجب أن يكون حرفين على الأقل"),
     password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
     confirmPassword: z.string(),
   })

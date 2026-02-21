@@ -17,63 +17,43 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
+
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 export default function DashboardShell({
   children,
+  role,
 }: {
   children: React.ReactNode;
+  role?: string;
 }) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const locale = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { data: session } = useSession();
 
-  const navItems = [
-    {
-      href: `/${locale}/dashboard`,
-      label: t("overview"),
-      icon: LayoutDashboard,
-    },
-    {
-      href: `/${locale}/dashboard/chalets`,
-      label: t("manageChalets"),
-      icon: Building,
-    },
-    {
-      href: `/${locale}/dashboard/bookings`,
-      label: t("manageBookings"),
-      icon: CalendarDays,
-    },
-    {
-      href: `/${locale}/dashboard/customers`,
-      label: t("manageCustomers"),
-      icon: Users,
-    },
-    {
-      href: `/${locale}/dashboard/reviews`,
-      label: t("manageReviews"),
-      icon: Star,
-    },
-    {
-      href: `/${locale}/dashboard/reports`,
-      label: t("reports"),
-      icon: BarChart3,
-    },
-    {
-      href: `/${locale}/dashboard/notifications`,
-      label: t("notifications"),
-      icon: Bell,
-      badge: 3,
-    },
-    {
-      href: `/${locale}/dashboard/settings`,
-      label: t("settings"),
-      icon: Settings,
-    },
+  const adminNavItems = [
+    { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
+    { href: `/${locale}/dashboard/chalets`, label: t("manageChalets"), icon: Building },
+    { href: `/${locale}/dashboard/bookings`, label: t("manageBookings"), icon: CalendarDays },
+    { href: `/${locale}/dashboard/customers`, label: t("manageCustomers"), icon: Users },
+    { href: `/${locale}/dashboard/reviews`, label: t("manageReviews"), icon: Star },
+    { href: `/${locale}/dashboard/reports`, label: t("reports"), icon: BarChart3 },
+    { href: `/${locale}/dashboard/notifications`, label: t("notifications"), icon: Bell },
+    { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
   ];
+
+  const ownerNavItems = [
+    { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
+    { href: `/${locale}/dashboard/chalets`, label: t("myChalets"), icon: Building },
+    { href: `/${locale}/dashboard/bookings`, label: t("myBookings"), icon: CalendarDays },
+    { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
+  ];
+
+  const navItems = role === "ADMIN" ? adminNavItems : ownerNavItems;
 
   const isActive = (href: string) => pathname === href;
 
@@ -105,11 +85,6 @@ export default function DashboardShell({
           >
             <item.icon className="h-4 w-4" />
             {item.label}
-            {item.badge && (
-              <Badge variant="destructive" className="ms-auto h-5 min-w-5 px-1.5 text-xs">
-                {item.badge}
-              </Badge>
-            )}
           </Link>
         ))}
       </nav>
@@ -157,9 +132,13 @@ export default function DashboardShell({
             </Button>
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">A</span>
+                <span className="text-sm font-medium text-primary">
+                  {(session?.user?.name || "U").charAt(0)}
+                </span>
               </div>
-              <span className="hidden text-sm font-medium sm:block">Admin</span>
+              <span className="hidden text-sm font-medium sm:block">
+                {session?.user?.name || (role === "ADMIN" ? "Admin" : "Owner")}
+              </span>
             </div>
           </div>
         </header>

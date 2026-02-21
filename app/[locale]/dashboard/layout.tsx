@@ -25,9 +25,9 @@ export default async function DashboardLayout({
   }
 
   const role = (session.user as { role?: string }).role;
-  if (role !== "ADMIN") {
+  if (role !== "ADMIN" && role !== "OWNER") {
     redirect(`/${locale}`);
   }
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return <DashboardShell role={role}>{children}</DashboardShell>;
 }

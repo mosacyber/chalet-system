@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, phone, password } = result.data;
+    const { name, email, phone, password, chaletName } = result.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -30,20 +30,44 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phone: phone || null,
-        password: hashedPassword,
-        role: "CUSTOMER",
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          phone: phone || null,
+          password: hashedPassword,
+          role: "OWNER",
+        },
+        select: { id: true, name: true, email: true, role: true },
+      });
+
+      const slug =
+        chaletName.trim().replace(/\s+/g, "-") +
+        "-" +
+        newUser.id.slice(0, 6);
+
+      await tx.chalet.create({
+        data: {
+          nameAr: chaletName,
+          nameEn: chaletName,
+          slug,
+          ownerId: newUser.id,
+          descriptionAr: "",
+          descriptionEn: "",
+          images: [],
+          amenities: [],
+          capacity: 0,
+          bedrooms: 0,
+          bathrooms: 0,
+          pricePerNight: 0,
+          locationAr: "",
+          locationEn: "",
+          isActive: false,
+        },
+      });
+
+      return newUser;
     });
 
     return NextResponse.json(

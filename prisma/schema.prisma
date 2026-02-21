@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   ADMIN
   CUSTOMER
+  OWNER
 }
 
 enum BookingStatus {
@@ -33,8 +34,9 @@ model User {
   email         String         @unique
   phone         String?
   password      String
-  role          Role           @default(CUSTOMER)
+  role          Role           @default(OWNER)
   image         String?
+  ownedChalets  Chalet[]       @relation("OwnedChalets")
   bookings      Booking[]
   reviews       Review[]
   notifications Notification[]
@@ -45,6 +47,8 @@ model User {
 model Chalet {
   id            String    @id @default(cuid())
   slug          String    @unique
+  ownerId       String?
+  owner         User?     @relation("OwnedChalets", fields: [ownerId], references: [id])
   nameAr        String
   nameEn        String
   descriptionAr String    @db.Text

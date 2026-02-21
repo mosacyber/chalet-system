@@ -21,6 +21,7 @@ export default function RegisterPage() {
     name: "",
     email: "",
     phone: "",
+    chaletName: "",
     password: "",
     confirmPassword: "",
   });
@@ -79,8 +80,8 @@ export default function RegisterPage() {
       });
 
       if (result?.ok) {
-        // New users are always CUSTOMER, redirect to home
-        router.push(`/${locale}`);
+        // OWNERs go to dashboard to manage their chalet
+        router.push(`/${locale}/dashboard`);
         router.refresh();
       } else {
         router.push(`/${locale}/auth/login`);
@@ -135,6 +136,16 @@ export default function RegisterPage() {
                 placeholder="+966 5X XXX XXXX"
                 dir="ltr"
                 value={formData.phone}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("chaletName")}</Label>
+              <Input
+                required
+                name="chaletName"
+                placeholder={t("chaletNamePlaceholder")}
+                value={formData.chaletName}
                 onChange={handleChange}
               />
             </div>

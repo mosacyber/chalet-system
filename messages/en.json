@@ -118,7 +118,9 @@
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "loginButton": "Login",
-    "registerButton": "Register"
+    "registerButton": "Register",
+    "chaletName": "Chalet / Resort Name",
+    "chaletNamePlaceholder": "e.g., Al-Raha Chalet"
   },
   "contact": {
     "title": "Contact Us",
@@ -169,7 +171,10 @@
     "approve": "Approve",
     "reject": "Reject",
     "export": "Export",
-    "noData": "No data available"
+    "noData": "No data available",
+    "myChalets": "My Chalets",
+    "myBookings": "My Bookings",
+    "totalChalets": "Total Chalets"
   },
   "reviews": {
     "title": "Reviews",
