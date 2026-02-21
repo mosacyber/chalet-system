@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -48,6 +49,48 @@ export async function POST(request: Request) {
     await prisma.$executeRawUnsafe(`ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
 
     return NextResponse.json({ message: "All tables created successfully!" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// PATCH: Seed admin account (one-time use)
+export async function PATCH(request: Request) {
+  const auth = request.headers.get("x-migrate-key");
+  if (auth !== process.env.NEXTAUTH_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { email, password, name } = body;
+
+    if (!email || !password || !name) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      // Upgrade existing user to ADMIN
+      await prisma.user.update({
+        where: { email },
+        data: { role: "ADMIN" },
+      });
+      return NextResponse.json({ message: "User upgraded to ADMIN" });
+    }
+
+    const hashedPassword = await hash(password, 12);
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+
+    return NextResponse.json({ message: "Admin account created" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
