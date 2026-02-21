@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { Menu, X, Globe, Home, Building, Info, Phone } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { Menu, X, Globe, Home, Building, Info, Phone, User, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -12,6 +13,9 @@ export default function Header() {
   const t = useTranslations("common");
   const locale = useLocale();
   const [open, setOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
 
   const navLinks = [
     { href: `/${locale}`, label: t("home"), icon: Home },
@@ -48,14 +52,45 @@ export default function Header() {
         {/* Desktop Actions */}
         <div className="hidden items-center gap-3 md:flex">
           <LanguageSwitcher />
-          <Link href={`/${locale}/auth/login`}>
-            <Button variant="ghost" size="sm">
-              {t("login")}
-            </Button>
-          </Link>
-          <Link href={`/${locale}/auth/register`}>
-            <Button size="sm">{t("register")}</Button>
-          </Link>
+          {isLoggedIn ? (
+            <>
+              {isAdmin && (
+                <Link href={`/${locale}/dashboard`}>
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <LayoutDashboard className="h-4 w-4" />
+                    {t("dashboard")}
+                  </Button>
+                </Link>
+              )}
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium">
+                  {session?.user?.name}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => signOut({ callbackUrl: `/${locale}` })}
+              >
+                <LogOut className="h-4 w-4" />
+                {t("logout")}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link href={`/${locale}/auth/login`}>
+                <Button variant="ghost" size="sm">
+                  {t("login")}
+                </Button>
+              </Link>
+              <Link href={`/${locale}/auth/register`}>
+                <Button size="sm">{t("register")}</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -91,22 +126,57 @@ export default function Header() {
               </nav>
 
               <div className="border-t pt-4">
-                <div className="flex flex-col gap-2">
-                  <Link
-                    href={`/${locale}/auth/login`}
-                    onClick={() => setOpen(false)}
-                  >
-                    <Button variant="outline" className="w-full">
-                      {t("login")}
+                {isLoggedIn ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">
+                        {session?.user?.name}
+                      </span>
+                    </div>
+                    {isAdmin && (
+                      <Link
+                        href={`/${locale}/dashboard`}
+                        onClick={() => setOpen(false)}
+                      >
+                        <Button variant="outline" className="w-full gap-2">
+                          <LayoutDashboard className="h-4 w-4" />
+                          {t("dashboard")}
+                        </Button>
+                      </Link>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="w-full gap-2 text-destructive"
+                      onClick={() => {
+                        setOpen(false);
+                        signOut({ callbackUrl: `/${locale}` });
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {t("logout")}
                     </Button>
-                  </Link>
-                  <Link
-                    href={`/${locale}/auth/register`}
-                    onClick={() => setOpen(false)}
-                  >
-                    <Button className="w-full">{t("register")}</Button>
-                  </Link>
-                </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href={`/${locale}/auth/login`}
+                      onClick={() => setOpen(false)}
+                    >
+                      <Button variant="outline" className="w-full">
+                        {t("login")}
+                      </Button>
+                    </Link>
+                    <Link
+                      href={`/${locale}/auth/register`}
+                      onClick={() => setOpen(false)}
+                    >
+                      <Button className="w-full">{t("register")}</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
