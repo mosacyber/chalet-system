@@ -1,5 +1,8 @@
 FROM node:20-alpine AS base
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
@@ -15,6 +18,9 @@ COPY . .
 # Use a dummy DATABASE_URL for prisma generate (only needs schema, not actual DB)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 ENV NEXT_TELEMETRY_DISABLED=1
+# Limit memory for constrained build environments
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
 RUN npx prisma generate
 RUN npm run build
 
