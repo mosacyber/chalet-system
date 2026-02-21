@@ -11,10 +11,10 @@ const nextConfig: NextConfig = {
       source: "/((?!_next/static|_next/image|favicon.ico).*)",
       headers: [
         {
-          // Prevent CDN from caching HTML/RSC responses
-          // (BunnyCDN strips Vary:RSC, causing it to serve RSC payload as HTML)
-          key: "CDN-Cache-Control",
-          value: "no-store",
+          // Override Next.js s-maxage=31536000 to prevent BunnyCDN
+          // from caching RSC payload (text/x-component) as HTML
+          key: "Cache-Control",
+          value: "public, max-age=0, must-revalidate",
         },
         {
           key: "Vary",
