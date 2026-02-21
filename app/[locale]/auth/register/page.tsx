@@ -79,7 +79,8 @@ export default function RegisterPage() {
       });
 
       if (result?.ok) {
-        router.push(`/${locale}/dashboard`);
+        // New users are always CUSTOMER, redirect to home
+        router.push(`/${locale}`);
         router.refresh();
       } else {
         router.push(`/${locale}/auth/login`);

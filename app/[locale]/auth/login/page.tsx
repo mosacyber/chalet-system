@@ -41,7 +41,11 @@ export default function LoginPage() {
         toast.success(
           locale === "ar" ? "تم تسجيل الدخول بنجاح" : "Login successful"
         );
-        router.push(`/${locale}/dashboard`);
+        // Fetch session to check role, redirect ADMIN to dashboard, CUSTOMER to home
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        const isAdmin = session?.user?.role === "ADMIN";
+        router.push(isAdmin ? `/${locale}/dashboard` : `/${locale}`);
         router.refresh();
       }
     } catch {
