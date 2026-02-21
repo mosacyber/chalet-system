@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Cairo, Inter } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
+import AuthProvider from "@/components/providers/AuthProvider";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import "../globals.css";
@@ -104,14 +105,16 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${fontClass} font-sans antialiased`}>
-        <NextIntlClientProvider messages={messages}>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <Toaster position={isAr ? "bottom-left" : "bottom-right"} />
-        </NextIntlClientProvider>
+        <AuthProvider>
+          <NextIntlClientProvider messages={messages}>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <Toaster position={isAr ? "bottom-left" : "bottom-right"} />
+          </NextIntlClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );

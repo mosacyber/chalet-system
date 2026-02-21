@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,14 +15,42 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const t = useTranslations("auth");
   const locale = useLocale();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success(locale === "ar" ? "تم تسجيل الدخول بنجاح" : "Login successful");
-    setLoading(false);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error(
+          locale === "ar"
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            : "Invalid email or password"
+        );
+      } else {
+        toast.success(
+          locale === "ar" ? "تم تسجيل الدخول بنجاح" : "Login successful"
+        );
+        router.push(`/${locale}/dashboard`);
+        router.refresh();
+      }
+    } catch {
+      toast.error(
+        locale === "ar" ? "حدث خطأ، حاول مرة أخرى" : "An error occurred"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +71,8 @@ export default function LoginPage() {
                 required
                 placeholder="email@example.com"
                 dir="ltr"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -53,9 +85,20 @@ export default function LoginPage() {
                   {t("forgotPassword")}
                 </Link>
               </div>
-              <Input type="password" required dir="ltr" />
+              <Input
+                type="password"
+                required
+                dir="ltr"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
               {loading
                 ? locale === "ar"
                   ? "جاري الدخول..."
