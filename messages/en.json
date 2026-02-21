@@ -174,7 +174,17 @@
     "noData": "No data available",
     "myChalets": "My Chalets",
     "myBookings": "My Bookings",
-    "totalChalets": "Total Chalets"
+    "totalChalets": "Total Chalets",
+    "chaletNameAr": "Chalet Name (Arabic)",
+    "chaletNameEn": "Chalet Name (English)",
+    "descriptionAr": "Description (Arabic)",
+    "descriptionEn": "Description (English)",
+    "locationAr": "Location (Arabic)",
+    "locationEn": "Location (English)",
+    "addChaletSuccess": "Chalet added successfully!",
+    "imageUrls": "Image URLs",
+    "imageUrlsHint": "Add one image URL per line",
+    "selectAmenities": "Select available amenities"
   },
   "reviews": {
     "title": "Reviews",

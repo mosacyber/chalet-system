@@ -174,7 +174,17 @@
     "noData": "لا توجد بيانات",
     "myChalets": "شاليهاتي",
     "myBookings": "حجوزاتي",
-    "totalChalets": "عدد الشاليهات"
+    "totalChalets": "عدد الشاليهات",
+    "chaletNameAr": "اسم الشاليه (عربي)",
+    "chaletNameEn": "اسم الشاليه (إنجليزي)",
+    "descriptionAr": "الوصف (عربي)",
+    "descriptionEn": "الوصف (إنجليزي)",
+    "locationAr": "الموقع (عربي)",
+    "locationEn": "الموقع (إنجليزي)",
+    "addChaletSuccess": "تم إضافة الشاليه بنجاح!",
+    "imageUrls": "روابط الصور",
+    "imageUrlsHint": "أضف رابط صورة واحد في كل سطر",
+    "selectAmenities": "اختر المرافق المتاحة"
   },
   "reviews": {
     "title": "التقييمات",
