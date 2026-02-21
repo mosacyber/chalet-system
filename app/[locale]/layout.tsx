@@ -34,7 +34,11 @@ export async function generateMetadata({
   const { locale } = await params;
   const isAr = locale === "ar";
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://chalet-system-pxz3v1.cranl.net";
+
   return {
+    metadataBase: new URL(siteUrl),
     title: {
       default: isAr
         ? "شاليهات الراحة - أفضل الشاليهات والاستراحات"
@@ -68,6 +72,9 @@ export async function generateMetadata({
       type: "website",
       locale: isAr ? "ar_SA" : "en_US",
       siteName: isAr ? "شاليهات الراحة" : "Al-Raha Chalets",
+    },
+    twitter: {
+      card: "summary_large_image",
     },
     robots: {
       index: true,
