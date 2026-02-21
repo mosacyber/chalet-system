@@ -1,0 +1,20 @@
+name: Purge CDN Cache after Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CranL build
+        run: sleep 120
+
+      - name: Purge BunnyCDN cache
+        run: |
+          curl -s -X POST \
+            "https://app.cranl.com/api/applications/${{ secrets.CRANL_APP_ID }}/purge-cache" \
+            -H "Authorization: Bearer ${{ secrets.CRANL_API_KEY }}" \
+            -H "Content-Type: application/json"
+          echo "Cache purged!"
