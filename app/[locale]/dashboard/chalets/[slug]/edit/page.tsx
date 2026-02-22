@@ -18,24 +18,6 @@ const AMENITY_KEYS = [
   "tv", "garden", "playground", "football", "volleyball", "jacuzzi",
 ] as const;
 
-interface ChaletData {
-  slug: string;
-  nameAr: string;
-  nameEn: string;
-  descriptionAr: string;
-  descriptionEn: string;
-  locationAr: string;
-  locationEn: string;
-  capacity: number;
-  bedrooms: number;
-  bathrooms: number;
-  pricePerNight: number;
-  weekendPrice: number | null;
-  images: string[];
-  amenities: string[];
-  isActive: boolean;
-}
-
 export default function EditChaletPage() {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
@@ -44,7 +26,7 @@ export default function EditChaletPage() {
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = decodeURIComponent(params.slug as string);
   const isAr = locale === "ar";
 
   const [loading, setLoading] = useState(true);
@@ -67,33 +49,33 @@ export default function EditChaletPage() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch(`/api/chalets?dashboard=true`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          const chalet = data.find((c: ChaletData) => c.slug === slug);
-          if (chalet) {
-            setFormData({
-              nameAr: chalet.nameAr || "",
-              nameEn: chalet.nameEn || "",
-              descriptionAr: chalet.descriptionAr || "",
-              descriptionEn: chalet.descriptionEn || "",
-              locationAr: chalet.locationAr || "",
-              locationEn: chalet.locationEn || "",
-              capacity: String(chalet.capacity || ""),
-              bedrooms: String(chalet.bedrooms || ""),
-              bathrooms: String(chalet.bathrooms || ""),
-              pricePerNight: String(Number(chalet.pricePerNight) || ""),
-              weekendPrice: chalet.weekendPrice ? String(Number(chalet.weekendPrice)) : "",
-            });
-            setImages(chalet.images || []);
-            setSelectedAmenities(chalet.amenities || []);
-          }
-        }
+    fetch(`/api/chalets/${encodeURIComponent(slug)}?dashboard=true`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
       })
-      .catch(() => {})
+      .then((chalet) => {
+        setFormData({
+          nameAr: chalet.nameAr || "",
+          nameEn: chalet.nameEn || "",
+          descriptionAr: chalet.descriptionAr || "",
+          descriptionEn: chalet.descriptionEn || "",
+          locationAr: chalet.locationAr || "",
+          locationEn: chalet.locationEn || "",
+          capacity: String(chalet.capacity || ""),
+          bedrooms: String(chalet.bedrooms || ""),
+          bathrooms: String(chalet.bathrooms || ""),
+          pricePerNight: String(Number(chalet.pricePerNight) || ""),
+          weekendPrice: chalet.weekendPrice ? String(Number(chalet.weekendPrice)) : "",
+        });
+        setImages(chalet.images || []);
+        setSelectedAmenities(chalet.amenities || []);
+      })
+      .catch(() => {
+        toast.error(isAr ? "فشل تحميل بيانات الشاليه" : "Failed to load chalet data");
+      })
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, isAr]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -148,7 +130,7 @@ export default function EditChaletPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`/api/chalets/${slug}`, {
+      const res = await fetch(`/api/chalets/${encodeURIComponent(slug)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

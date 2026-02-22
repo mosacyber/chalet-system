@@ -3,10 +3,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+  const url = new URL(request.url);
+  const dashboardMode = url.searchParams.get("dashboard") === "true";
 
   const chalet = await prisma.chalet.findUnique({
     where: { slug },
@@ -20,7 +22,23 @@ export async function GET(
     },
   });
 
-  if (!chalet || !chalet.isActive) {
+  if (!chalet) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (dashboardMode) {
+    const session = await auth();
+    const role = (session?.user as { role?: string })?.role;
+    if (role === "ADMIN" || (role === "OWNER" && chalet.ownerId === session?.user?.id)) {
+      return NextResponse.json({
+        ...chalet,
+        pricePerNight: Number(chalet.pricePerNight),
+        weekendPrice: chalet.weekendPrice ? Number(chalet.weekendPrice) : null,
+      });
+    }
+  }
+
+  if (!chalet.isActive) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
