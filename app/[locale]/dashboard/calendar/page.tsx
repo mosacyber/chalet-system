@@ -564,7 +564,7 @@ export default function DashboardCalendarPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20 xl:pb-0">
+    <div className="space-y-6 pb-20 lg:pb-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageCalendar")}</h1>
@@ -602,9 +602,9 @@ export default function DashboardCalendarPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Calendar */}
-          <div className="xl:col-span-2">
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg">
@@ -675,8 +675,8 @@ export default function DashboardCalendarPage() {
           </div>
 
           {/* Sidebar - Actions */}
-          <div className="xl:col-span-1">
-            <Card className="xl:sticky xl:top-20">
+          <div className="lg:col-span-1">
+            <Card className="lg:sticky lg:top-20">
               <CardHeader>
                 <CardTitle className="text-lg">
                   {isAr ? "الإجراءات" : "Actions"}
@@ -1229,7 +1229,7 @@ export default function DashboardCalendarPage() {
 
       {/* Sticky bottom action bar for tablet/mobile */}
       {selectedSlug && !loading && (selectedDates || []).length > 0 && (
-        <div className="xl:hidden fixed bottom-0 inset-x-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 shadow-lg">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 shadow-lg">
           <div className="flex items-center gap-3 max-w-3xl mx-auto">
             {/* Selection info */}
             <div className="flex items-center gap-2 text-sm shrink-0">
