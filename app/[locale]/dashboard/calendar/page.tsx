@@ -615,8 +615,8 @@ export default function DashboardCalendarPage() {
                   <span>{t("hijriDate")}: <span className="font-semibold text-foreground">{hijriMonthText}</span></span>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex justify-center">
+              <CardContent className="px-2 sm:px-6">
+                <div className="flex justify-center overflow-x-auto">
                   <Calendar
                     mode="multiple"
                     selected={selectedDates}
@@ -639,7 +639,7 @@ export default function DashboardCalendarPage() {
                     numberOfMonths={isXl ? 2 : 1}
                     locale={isAr ? arLocale : undefined}
                     dir={isAr ? "rtl" : "ltr"}
-                    className="rounded-md border p-3 [--cell-size:2.75rem]"
+                    className="rounded-md border p-2 sm:p-3 [--cell-size:2.25rem] sm:[--cell-size:2.5rem] xl:[--cell-size:2.75rem] w-full max-w-full overflow-x-auto"
                     onMonthChange={setCurrentMonth}
                   />
                 </div>
@@ -835,7 +835,7 @@ export default function DashboardCalendarPage() {
 
             {/* Desktop: Table layout */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="border-b text-sm text-muted-foreground">
                     <th className="px-4 py-3 text-start font-medium">{t("bookingDate")}</th>
