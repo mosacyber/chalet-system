@@ -195,7 +195,19 @@
     "blockedByOwner": "محجوب من المالك",
     "customerBooking": "حجز عميل",
     "availableDay": "متاح",
-    "selectDatesToBlock": "اختر الأيام التي تريد حجبها"
+    "selectDatesToBlock": "اختر الأيام التي تريد حجبها",
+    "selectChalet": "اختر الشاليه",
+    "hijriDate": "التاريخ الهجري",
+    "addBooking": "إضافة حجز",
+    "guestName": "اسم الضيف",
+    "guestPhone": "رقم الجوال",
+    "paymentMethodLabel": "طريقة الدفع",
+    "cash": "كاش",
+    "transfer": "تحويل",
+    "card": "شبكة",
+    "depositAmount": "العربون",
+    "remainingAmountLabel": "الباقي",
+    "bookingDetails": "تفاصيل الحجز"
   },
   "reviews": {
     "title": "التقييمات",

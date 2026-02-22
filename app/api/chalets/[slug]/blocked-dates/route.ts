@@ -29,7 +29,7 @@ async function getSessionAndChalet(slug: string) {
   return { user, chalet };
 }
 
-// GET - fetch manually blocked dates
+// GET - fetch manually blocked dates with guest details
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
@@ -47,15 +47,30 @@ export async function GET(
       status: "BLOCKED",
       checkOut: { gte: today },
     },
-    select: { checkIn: true },
+    select: {
+      checkIn: true,
+      guestName: true,
+      guestPhone: true,
+      paymentMethod: true,
+      deposit: true,
+      remainingAmount: true,
+    },
     orderBy: { checkIn: "asc" },
   });
 
-  const dates = blocked.map((b) => b.checkIn.toISOString().split("T")[0]);
-  return NextResponse.json(dates);
+  const data = blocked.map((b) => ({
+    date: b.checkIn.toISOString().split("T")[0],
+    guestName: b.guestName || "",
+    guestPhone: b.guestPhone || "",
+    paymentMethod: b.paymentMethod || "",
+    deposit: b.deposit ? Number(b.deposit) : 0,
+    remainingAmount: b.remainingAmount ? Number(b.remainingAmount) : 0,
+  }));
+
+  return NextResponse.json(data);
 }
 
-// POST - block dates
+// POST - block dates with guest info
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
@@ -66,6 +81,11 @@ export async function POST(
 
   const body = await request.json();
   const dates: string[] = body.dates;
+  const guestName: string = body.guestName || "";
+  const guestPhone: string = body.guestPhone || "";
+  const paymentMethod: string = body.paymentMethod || "";
+  const deposit: number = body.deposit || 0;
+  const remainingAmount: number = body.remainingAmount || 0;
 
   if (!Array.isArray(dates) || dates.length === 0) {
     return NextResponse.json({ error: "dates array required" }, { status: 400 });
@@ -89,14 +109,12 @@ export async function POST(
     }
   }
 
-  // Filter to only new dates that aren't already occupied
   const newDates = dates.filter((date) => !occupiedDates.has(date));
 
   if (newDates.length === 0) {
     return NextResponse.json({ message: "All dates already occupied", created: 0 });
   }
 
-  // Create blocked bookings
   const bookings = newDates.map((date) => {
     const checkIn = new Date(date + "T00:00:00Z");
     const checkOut = new Date(checkIn);
@@ -111,6 +129,11 @@ export async function POST(
       totalPrice: 0,
       status: "BLOCKED" as const,
       notes: "Blocked by owner",
+      guestName: guestName || null,
+      guestPhone: guestPhone || null,
+      paymentMethod: paymentMethod || null,
+      deposit: deposit || null,
+      remainingAmount: remainingAmount || null,
     };
   });
 
@@ -135,7 +158,6 @@ export async function DELETE(
     return NextResponse.json({ error: "dates array required" }, { status: 400 });
   }
 
-  // Delete BLOCKED bookings that match these dates
   let deleted = 0;
   for (const date of dates) {
     const checkIn = new Date(date + "T00:00:00Z");

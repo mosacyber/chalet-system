@@ -83,10 +83,15 @@ model Booking {
   guests     Int
   totalPrice Decimal       @db.Decimal(10, 2)
   status     BookingStatus @default(PENDING)
-  notes      String?       @db.Text
-  payment    Payment?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  notes           String?       @db.Text
+  guestName       String?
+  guestPhone      String?
+  paymentMethod   String?
+  deposit         Decimal?      @db.Decimal(10, 2)
+  remainingAmount Decimal?      @db.Decimal(10, 2)
+  payment         Payment?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Payment {

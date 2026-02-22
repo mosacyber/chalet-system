@@ -195,7 +195,19 @@
     "blockedByOwner": "Blocked by owner",
     "customerBooking": "Customer booking",
     "availableDay": "Available",
-    "selectDatesToBlock": "Select days you want to block"
+    "selectDatesToBlock": "Select days you want to block",
+    "selectChalet": "Select Chalet",
+    "hijriDate": "Hijri Date",
+    "addBooking": "Add Booking",
+    "guestName": "Guest Name",
+    "guestPhone": "Phone Number",
+    "paymentMethodLabel": "Payment Method",
+    "cash": "Cash",
+    "transfer": "Bank Transfer",
+    "card": "Card",
+    "depositAmount": "Deposit",
+    "remainingAmountLabel": "Remaining",
+    "bookingDetails": "Booking Details"
   },
   "reviews": {
     "title": "Reviews",

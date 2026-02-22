@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building,
   CalendarDays,
+  CalendarCheck,
   Users,
   Star,
   BarChart3,
@@ -38,6 +39,7 @@ export default function DashboardShell({
   const adminNavItems = [
     { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
     { href: `/${locale}/dashboard/chalets`, label: t("manageChalets"), icon: Building },
+    { href: `/${locale}/dashboard/calendar`, label: t("manageCalendar"), icon: CalendarCheck },
     { href: `/${locale}/dashboard/bookings`, label: t("manageBookings"), icon: CalendarDays },
     { href: `/${locale}/dashboard/customers`, label: t("manageCustomers"), icon: Users },
     { href: `/${locale}/dashboard/reviews`, label: t("manageReviews"), icon: Star },
@@ -49,13 +51,14 @@ export default function DashboardShell({
   const ownerNavItems = [
     { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
     { href: `/${locale}/dashboard/chalets`, label: t("myChalets"), icon: Building },
+    { href: `/${locale}/dashboard/calendar`, label: t("manageCalendar"), icon: CalendarCheck },
     { href: `/${locale}/dashboard/bookings`, label: t("myBookings"), icon: CalendarDays },
     { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
   ];
 
   const navItems = role === "ADMIN" ? adminNavItems : ownerNavItems;
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => pathname === href || (href !== `/${locale}/dashboard` && pathname.startsWith(href + "/"));
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
