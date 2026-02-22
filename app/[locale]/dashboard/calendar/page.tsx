@@ -564,7 +564,7 @@ export default function DashboardCalendarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 xl:pb-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("manageCalendar")}</h1>
@@ -1226,6 +1226,47 @@ export default function DashboardCalendarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sticky bottom action bar for tablet/mobile */}
+      {selectedSlug && !loading && (selectedDates || []).length > 0 && (
+        <div className="xl:hidden fixed bottom-0 inset-x-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 shadow-lg">
+          <div className="flex items-center gap-3 max-w-3xl mx-auto">
+            {/* Selection info */}
+            <div className="flex items-center gap-2 text-sm shrink-0">
+              <span className="font-semibold">{(selectedDates || []).length}</span>
+              <span className="text-muted-foreground">{isAr ? "يوم" : "days"}</span>
+              {selectedAvailable > 0 && (
+                <span className="text-xs text-green-600">({selectedAvailable} {isAr ? "متاح" : "avail."})</span>
+              )}
+            </div>
+            {/* Action buttons */}
+            <div className="flex gap-2 flex-1">
+              <Button
+                onClick={openBookingDialog}
+                disabled={saving || selectedAvailable === 0}
+                className="flex-1 gap-2"
+                variant="destructive"
+                size="sm"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                {t("addBooking")}
+              </Button>
+              {selectedBlocked > 0 && (
+                <Button
+                  onClick={handleUnblock}
+                  disabled={saving}
+                  className="gap-2"
+                  variant="outline"
+                  size="sm"
+                >
+                  <Unlock className="h-4 w-4" />
+                  {t("unblockDates")} ({selectedBlocked})
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
