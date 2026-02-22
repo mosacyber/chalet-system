@@ -98,35 +98,43 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
           <div className="lg:col-span-2">
             {/* Gallery */}
             <div className="mb-6 overflow-hidden rounded-xl">
-              <div className="relative h-[400px] w-full">
-                <Image
-                  src={chalet.images[selectedImage]}
-                  alt={isAr ? chalet.nameAr : chalet.nameEn}
-                  fill
-                  className="object-cover"
-                  priority
-                />
+              <div className="relative h-[400px] w-full bg-muted">
+                {chalet.images.length > 0 ? (
+                  <Image
+                    src={chalet.images[selectedImage]}
+                    alt={isAr ? chalet.nameAr : chalet.nameEn}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-muted-foreground">
+                    {isAr ? "لا توجد صور" : "No images"}
+                  </div>
+                )}
               </div>
-              <div className="mt-3 flex gap-3">
-                {chalet.images.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`relative h-20 w-28 overflow-hidden rounded-md ${
-                      selectedImage === index
-                        ? "ring-2 ring-primary"
-                        : "opacity-70"
-                    }`}
-                  >
-                    <Image
-                      src={img}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+              {chalet.images.length > 1 && (
+                <div className="mt-3 flex gap-3">
+                  {chalet.images.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`relative h-20 w-28 overflow-hidden rounded-md ${
+                        selectedImage === index
+                          ? "ring-2 ring-primary"
+                          : "opacity-70"
+                      }`}
+                    >
+                      <Image
+                        src={img}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Title & Location */}
