@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
+import { type DayButton as DayButtonType } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,22 @@ function getHijriMonth(date: Date): string {
 
 function getHijriDay(date: Date): string {
   return hijriDayFormatter.format(date);
+}
+
+// Hijri day number only (for calendar cells)
+const hijriDayNumFormatter = new Intl.DateTimeFormat("ar-u-ca-islamic-umalqura", {
+  day: "numeric",
+});
+
+// Custom DayButton that shows both Gregorian and Hijri day numbers
+function HijriDayButton({ children, day, ...rest }: React.ComponentProps<typeof DayButtonType>) {
+  const hijriNum = hijriDayNumFormatter.format(day.date);
+  return (
+    <CalendarDayButton day={day} {...rest}>
+      {children}
+      <span className="!text-[9px] !opacity-50 leading-none font-normal">{hijriNum}</span>
+    </CalendarDayButton>
+  );
 }
 
 export default function DashboardCalendarPage() {
@@ -436,9 +453,12 @@ export default function DashboardCalendarPage() {
                       ownerBlocked:
                         "!bg-red-100 !text-red-500 !opacity-100 dark:!bg-red-950 dark:!text-red-400",
                     }}
+                    components={{
+                      DayButton: HijriDayButton,
+                    }}
                     numberOfMonths={2}
                     dir={isAr ? "rtl" : "ltr"}
-                    className="rounded-md border p-3"
+                    className="rounded-md border p-3 [--cell-size:2.75rem]"
                     onMonthChange={setCurrentMonth}
                   />
                 </div>
