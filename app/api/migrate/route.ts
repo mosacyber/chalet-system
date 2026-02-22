@@ -91,7 +91,16 @@ export async function PUT(request: Request) {
   await run("Create WaterExpense table", `CREATE TABLE IF NOT EXISTS "WaterExpense" ("id" TEXT NOT NULL, "chaletId" TEXT NOT NULL, "amount" DECIMAL(10,2) NOT NULL, "notes" TEXT, "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "WaterExpense_pkey" PRIMARY KEY ("id"))`);
   await run("Add WaterExpense FK", `ALTER TABLE "WaterExpense" ADD CONSTRAINT "WaterExpense_chaletId_fkey" FOREIGN KEY ("chaletId") REFERENCES "Chalet"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
 
-  return NextResponse.json({ message: "V2/V3/V4 migration complete", results });
+  // V5: Add missing Booking columns
+  await run("Add guestName", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "guestName" TEXT`);
+  await run("Add guestPhone", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "guestPhone" TEXT`);
+  await run("Add paymentMethod", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT`);
+  await run("Add deposit", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "deposit" DECIMAL(10,2)`);
+  await run("Add remainingAmount", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingAmount" DECIMAL(10,2)`);
+  await run("Add remainingPaymentMethod", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingPaymentMethod" TEXT`);
+  await run("Add remainingCollected", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingCollected" BOOLEAN NOT NULL DEFAULT false`);
+
+  return NextResponse.json({ message: "V2/V3/V4/V5 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)
