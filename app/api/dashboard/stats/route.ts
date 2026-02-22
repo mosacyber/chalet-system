@@ -22,17 +22,13 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [totalChalets, totalBookings, blockedBookings, waterResult, recentBookings, settings] =
+  const [totalChalets, totalBookings, blockedBookings, recentBookings] =
     await Promise.all([
       prisma.chalet.count({ where: ownerFilter }),
       prisma.booking.count({ where: { ...bookingFilter, status: "BLOCKED" } }),
       prisma.booking.findMany({
         where: { ...bookingFilter, status: "BLOCKED" },
         select: { deposit: true, remainingAmount: true, paymentMethod: true },
-      }),
-      prisma.waterExpense.aggregate({
-        where: waterFilter,
-        _sum: { amount: true },
       }),
       prisma.booking.findMany({
         where: { ...bookingFilter, status: "BLOCKED" },
@@ -42,6 +38,17 @@ export async function GET() {
         },
         orderBy: { createdAt: "desc" },
         take: 5,
+      }),
+    ]);
+
+  // Water expenses and settings - wrapped in try/catch for graceful fallback
+  let waterResult: { _sum: { amount: unknown } } = { _sum: { amount: 0 } };
+  let settings: { key: string; value: string }[] = [];
+  try {
+    [waterResult, settings] = await Promise.all([
+      prisma.waterExpense.aggregate({
+        where: waterFilter,
+        _sum: { amount: true },
       }),
       prisma.siteSetting.findMany({
         where: {
@@ -55,6 +62,9 @@ export async function GET() {
         },
       }),
     ]);
+  } catch {
+    // Table may not exist yet - graceful fallback
+  }
 
   // Calculate revenue breakdown from BLOCKED bookings
   let totalRevenue = 0;
