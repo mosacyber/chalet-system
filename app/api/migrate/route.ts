@@ -2,19 +2,6 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-// TEMPORARY: One-time migration for BLOCKED enum (remove after use)
-export async function GET() {
-  try {
-    await prisma.$executeRawUnsafe(
-      `ALTER TYPE "BookingStatus" ADD VALUE IF NOT EXISTS 'BLOCKED'`
-    );
-    return NextResponse.json({ message: "BLOCKED status added successfully" });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
 export async function POST(request: Request) {
   const auth = request.headers.get("x-migrate-key");
   if (auth !== (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET)) {
