@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Loader2, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Save, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -49,6 +49,8 @@ export default function EditChaletPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     nameAr: "",
     nameEn: "",
@@ -61,7 +63,6 @@ export default function EditChaletPage() {
     bathrooms: "",
     pricePerNight: "",
     weekendPrice: "",
-    imageUrls: "",
   });
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
@@ -84,8 +85,8 @@ export default function EditChaletPage() {
               bathrooms: String(chalet.bathrooms || ""),
               pricePerNight: String(Number(chalet.pricePerNight) || ""),
               weekendPrice: chalet.weekendPrice ? String(Number(chalet.weekendPrice)) : "",
-              imageUrls: (chalet.images || []).join("\n"),
             });
+            setImages(chalet.images || []);
             setSelectedAmenities(chalet.amenities || []);
           }
         }
@@ -106,6 +107,36 @@ export default function EditChaletPage() {
     );
   };
 
+  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    setUploading(true);
+    const fd = new FormData();
+    for (const file of Array.from(files)) {
+      fd.append("files", file);
+    }
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        setImages((prev) => [...prev, ...data.urls]);
+      } else {
+        toast.error(isAr ? "فشل رفع الصور" : "Image upload failed");
+      }
+    } catch {
+      toast.error(isAr ? "فشل رفع الصور" : "Image upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -117,11 +148,6 @@ export default function EditChaletPage() {
     setSaving(true);
 
     try {
-      const images = formData.imageUrls
-        .split("\n")
-        .map((url) => url.trim())
-        .filter(Boolean);
-
       const res = await fetch(`/api/chalets/${slug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -398,19 +424,62 @@ export default function EditChaletPage() {
         {/* Images */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{t("imageUrls")}</CardTitle>
+            <CardTitle className="text-lg">
+              {isAr ? "الصور" : "Images"}
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {t("imageUrlsHint")}
+              {isAr ? "ارفق صور الشاليه" : "Attach chalet images"}
             </p>
           </CardHeader>
-          <CardContent>
-            <Textarea
-              name="imageUrls"
-              value={formData.imageUrls}
-              onChange={handleChange}
-              rows={4}
-              dir="ltr"
-            />
+          <CardContent className="space-y-4">
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {images.map((url, index) => (
+                  <div
+                    key={index}
+                    className="group relative aspect-square overflow-hidden rounded-lg border"
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 transition-colors hover:border-primary/50">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleUploadImages}
+                disabled={uploading}
+              />
+              {uploading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {isAr ? "اضغط لرفع الصور" : "Click to upload images"}
+                  </span>
+                  <span className="text-xs text-muted-foreground/70">
+                    {isAr
+                      ? "JPG, PNG, WebP - حد أقصى 5 ميجابايت"
+                      : "JPG, PNG, WebP - Max 5MB each"}
+                  </span>
+                </>
+              )}
+            </label>
           </CardContent>
         </Card>
 
