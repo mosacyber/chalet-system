@@ -34,6 +34,8 @@ import {
   Eye,
   Printer,
   Trash2,
+  Pencil,
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,6 +53,8 @@ interface BlockedDateInfo {
   paymentMethod: string;
   deposit: number;
   remainingAmount: number;
+  remainingPaymentMethod: string;
+  remainingCollected: boolean;
   createdAt: string;
 }
 
@@ -124,6 +128,14 @@ export default function DashboardCalendarPage() {
     paymentMethod: "",
     deposit: "",
     remainingAmount: "",
+  });
+
+  // Edit remaining dialog
+  const [showEditRemainingDialog, setShowEditRemainingDialog] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<BlockedDateInfo | null>(null);
+  const [editRemainingData, setEditRemainingData] = useState({
+    remainingAmount: "",
+    remainingPaymentMethod: "",
   });
 
   // Responsive: 1 month on mobile, 2 on md+
@@ -294,6 +306,8 @@ export default function DashboardCalendarPage() {
             paymentMethod: formData.paymentMethod,
             deposit: Number(formData.deposit) || 0,
             remainingAmount: Number(formData.remainingAmount) || 0,
+            remainingPaymentMethod: "",
+            remainingCollected: false,
             createdAt: new Date().toISOString(),
           });
         }
@@ -376,6 +390,67 @@ export default function DashboardCalendarPage() {
         setBlockedInfo(newMap);
         setShowDetailsDialog(false);
         toast.success(isAr ? "تم إلغاء الحجز" : "Booking removed");
+      }
+    } catch {
+      toast.error(isAr ? "حدث خطأ" : "An error occurred");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Open edit remaining dialog
+  const openEditRemaining = (booking: BlockedDateInfo) => {
+    setEditingBooking(booking);
+    setEditRemainingData({
+      remainingAmount: String(booking.remainingAmount || ""),
+      remainingPaymentMethod: booking.remainingPaymentMethod || "",
+    });
+    setShowEditRemainingDialog(true);
+  };
+
+  // Submit edit remaining
+  const handleSubmitEditRemaining = async () => {
+    if (!selectedSlug || !editingBooking) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/chalets/${selectedSlug}/blocked-dates`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: editingBooking.id,
+          remainingAmount: Number(editRemainingData.remainingAmount) || 0,
+          remainingPaymentMethod: editRemainingData.remainingPaymentMethod,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Update local state
+        const newMap = new Map(blockedInfo);
+        const existing = newMap.get(editingBooking.date);
+        if (existing) {
+          newMap.set(editingBooking.date, {
+            ...existing,
+            remainingAmount: data.remainingAmount ?? (Number(editRemainingData.remainingAmount) || 0),
+            remainingPaymentMethod: data.remainingPaymentMethod ?? editRemainingData.remainingPaymentMethod,
+            remainingCollected: data.remainingCollected ?? (!!editRemainingData.remainingPaymentMethod),
+          });
+          setBlockedInfo(newMap);
+        }
+        setShowEditRemainingDialog(false);
+        // Also update details dialog if open
+        if (detailsDate?.id === editingBooking.id) {
+          setDetailsDate({
+            ...detailsDate,
+            remainingAmount: data.remainingAmount ?? (Number(editRemainingData.remainingAmount) || 0),
+            remainingPaymentMethod: data.remainingPaymentMethod ?? editRemainingData.remainingPaymentMethod,
+            remainingCollected: data.remainingCollected ?? (!!editRemainingData.remainingPaymentMethod),
+          });
+        }
+        toast.success(isAr ? "تم تحديث الباقي بنجاح" : "Remaining updated successfully");
+      } else {
+        toast.error(isAr ? "حدث خطأ" : "An error occurred");
       }
     } catch {
       toast.error(isAr ? "حدث خطأ" : "An error occurred");
@@ -735,6 +810,23 @@ export default function DashboardCalendarPage() {
                     <span className="text-green-600">{t("depositAmount")}: {booking.deposit.toLocaleString()}</span>
                     <span className="font-bold">{(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}</span>
                   </div>
+                  {/* Remaining status / edit button */}
+                  {booking.remainingAmount > 0 && (
+                    <div className="flex items-center justify-between text-sm pt-1 border-t">
+                      <span className="text-muted-foreground">{isAr ? "الباقي" : "Remaining"}: <span className="text-orange-500 font-medium">{booking.remainingAmount.toLocaleString()}</span></span>
+                      {booking.remainingCollected ? (
+                        <span className="flex items-center gap-1 text-green-600 text-xs">
+                          <CheckCircle className="h-3 w-3" />
+                          {isAr ? "تم الاستلام" : "Collected"} ({paymentMethodLabel(booking.remainingPaymentMethod)})
+                        </span>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openEditRemaining(booking)}>
+                          <Pencil className="h-3 w-3" />
+                          {isAr ? "استلام الباقي" : "Collect"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -765,7 +857,28 @@ export default function DashboardCalendarPage() {
                       <td className="px-4 py-3 text-sm" dir="ltr">{booking.guestPhone || "-"}</td>
                       <td className="px-4 py-3 text-sm">{booking.paymentMethod ? paymentMethodLabel(booking.paymentMethod) : "-"}</td>
                       <td className="px-4 py-3 text-sm text-green-600 font-medium">{booking.deposit > 0 ? `${booking.deposit.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}</td>
-                      <td className="px-4 py-3 text-sm text-orange-500 font-medium">{booking.remainingAmount > 0 ? `${booking.remainingAmount.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          {booking.remainingCollected ? (
+                            <span className="flex items-center gap-1 text-green-600 font-medium">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {isAr ? "تم الاستلام" : "Collected"}
+                              {booking.remainingPaymentMethod && (
+                                <span className="text-xs text-muted-foreground">({paymentMethodLabel(booking.remainingPaymentMethod)})</span>
+                              )}
+                            </span>
+                          ) : booking.remainingAmount > 0 ? (
+                            <>
+                              <span className="text-orange-500 font-medium">{booking.remainingAmount.toLocaleString()} {isAr ? "ريال" : "SAR"}</span>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" title={isAr ? "تعديل الباقي" : "Edit remaining"} onClick={() => openEditRemaining(booking)}>
+                                <Pencil className="h-3.5 w-3.5 text-primary" />
+                              </Button>
+                            </>
+                          ) : (
+                            <span>-</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm font-bold">{(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -913,6 +1026,91 @@ export default function DashboardCalendarPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Remaining Dialog */}
+      <Dialog open={showEditRemainingDialog} onOpenChange={setShowEditRemainingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isAr ? "استلام الباقي" : "Collect Remaining"}</DialogTitle>
+          </DialogHeader>
+          {editingBooking && (
+            <div className="space-y-4">
+              {/* Booking info */}
+              <div className="rounded-lg bg-muted p-3 text-center space-y-1">
+                <p className="text-sm text-muted-foreground">{editingBooking.guestName || (isAr ? "بدون اسم" : "No name")}</p>
+                <p className="font-semibold">{editingBooking.date}</p>
+                <p className="text-xs text-muted-foreground">{getHijriDay(new Date(editingBooking.date + "T00:00:00"))}</p>
+              </div>
+
+              {/* Current remaining */}
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-xs text-muted-foreground">{isAr ? "المبلغ الباقي" : "Remaining Amount"}</p>
+                <p className="text-2xl font-bold text-orange-500">
+                  {editingBooking.remainingAmount.toLocaleString()} <span className="text-sm">{isAr ? "ريال" : "SAR"}</span>
+                </p>
+              </div>
+
+              {/* Payment method selection */}
+              <div className="space-y-2">
+                <Label>{isAr ? "طريقة الاستلام" : "Collection Method"}</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: "cash", icon: Banknote, label: isAr ? "كاش" : "Cash" },
+                    { key: "card", icon: CreditCard, label: isAr ? "شبكة" : "Card" },
+                    { key: "transfer", icon: Building2, label: isAr ? "تحويل" : "Transfer" },
+                  ].map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setEditRemainingData((p) => ({ ...p, remainingPaymentMethod: key }))
+                      }
+                      className={`flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors ${
+                        editRemainingData.remainingPaymentMethod === key
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Optional: edit remaining amount */}
+              <div className="space-y-2">
+                <Label>{isAr ? "المبلغ المستلم" : "Amount Collected"}</Label>
+                <Input
+                  type="number"
+                  dir="ltr"
+                  min={0}
+                  step="0.01"
+                  value={editRemainingData.remainingAmount}
+                  onChange={(e) =>
+                    setEditRemainingData((p) => ({ ...p, remainingAmount: e.target.value }))
+                  }
+                  placeholder={String(editingBooking.remainingAmount)}
+                />
+              </div>
+
+              {/* Submit */}
+              <Button
+                onClick={handleSubmitEditRemaining}
+                disabled={saving || !editRemainingData.remainingPaymentMethod}
+                className="w-full gap-2"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                {isAr ? "تأكيد الاستلام" : "Confirm Collection"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="sm:max-w-md">
@@ -975,6 +1173,27 @@ export default function DashboardCalendarPage() {
                     </p>
                   </div>
                 </div>
+              )}
+
+              {/* Remaining collection status / button */}
+              {detailsDate.remainingAmount > 0 && (
+                detailsDate.remainingCollected ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg bg-green-50 dark:bg-green-950 p-3 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="font-medium">
+                      {isAr ? "تم استلام الباقي" : "Remaining collected"} - {paymentMethodLabel(detailsDate.remainingPaymentMethod)}
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => openEditRemaining(detailsDate)}
+                    className="w-full gap-2"
+                    variant="default"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    {isAr ? "استلام الباقي" : "Collect Remaining"}
+                  </Button>
+                )
               )}
 
               {/* Action buttons */}
