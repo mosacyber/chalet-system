@@ -87,7 +87,11 @@ export async function PUT(request: Request) {
   // V3: Add BLOCKED to BookingStatus
   await run("Add BLOCKED status", `ALTER TYPE "BookingStatus" ADD VALUE IF NOT EXISTS 'BLOCKED'`);
 
-  return NextResponse.json({ message: "V2/V3 migration complete", results });
+  // V4: WaterExpense table
+  await run("Create WaterExpense table", `CREATE TABLE IF NOT EXISTS "WaterExpense" ("id" TEXT NOT NULL, "chaletId" TEXT NOT NULL, "amount" DECIMAL(10,2) NOT NULL, "notes" TEXT, "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "WaterExpense_pkey" PRIMARY KEY ("id"))`);
+  await run("Add WaterExpense FK", `ALTER TABLE "WaterExpense" ADD CONSTRAINT "WaterExpense_chaletId_fkey" FOREIGN KEY ("chaletId") REFERENCES "Chalet"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
+
+  return NextResponse.json({ message: "V2/V3/V4 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)

@@ -214,7 +214,10 @@
     "printInvoice": "طباعة فاتورة",
     "deleteBooking": "حذف الحجز",
     "noBookings": "لا توجد حجوزات",
-    "bookingNumber": "رقم الحجز"
+    "bookingNumber": "رقم الحجز",
+    "waterTanker": "وايت الماء",
+    "revenueBreakdown": "تفصيل الإيرادات",
+    "paymentLocations": "أماكن المبالغ"
   },
   "reviews": {
     "title": "التقييمات",

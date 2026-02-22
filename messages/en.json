@@ -214,7 +214,10 @@
     "printInvoice": "Print Invoice",
     "deleteBooking": "Delete Booking",
     "noBookings": "No bookings",
-    "bookingNumber": "Booking #"
+    "bookingNumber": "Booking #",
+    "waterTanker": "Water Tanker",
+    "revenueBreakdown": "Revenue Breakdown",
+    "paymentLocations": "Payment Locations"
   },
   "reviews": {
     "title": "Reviews",

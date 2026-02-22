@@ -65,11 +65,12 @@ model Chalet {
   locationEn    String
   latitude      Float?
   longitude     Float?
-  isActive      Boolean   @default(true)
-  bookings      Booking[]
-  reviews       Review[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isActive       Boolean        @default(true)
+  bookings       Booking[]
+  reviews        Review[]
+  waterExpenses  WaterExpense[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model Booking {
@@ -142,6 +143,16 @@ model ContactMessage {
   phone     String?
   message   String   @db.Text
   isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model WaterExpense {
+  id        String   @id @default(cuid())
+  chaletId  String
+  chalet    Chalet   @relation(fields: [chaletId], references: [id])
+  amount    Decimal  @db.Decimal(10, 2)
+  notes     String?
+  date      DateTime @default(now())
   createdAt DateTime @default(now())
 }
 

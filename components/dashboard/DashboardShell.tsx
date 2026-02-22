@@ -15,6 +15,7 @@ import {
   Bell,
   LogOut,
   Menu,
+  Droplets,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -32,6 +33,7 @@ export default function DashboardShell({
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const locale = useLocale();
+  const isAr = locale === "ar";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
@@ -40,6 +42,7 @@ export default function DashboardShell({
     { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
     { href: `/${locale}/dashboard/chalets`, label: t("manageChalets"), icon: Building },
     { href: `/${locale}/dashboard/calendar`, label: t("manageCalendar"), icon: CalendarCheck },
+    { href: `/${locale}/dashboard/water`, label: isAr ? "وايت الماء" : "Water Tanker", icon: Droplets },
     { href: `/${locale}/dashboard/bookings`, label: t("manageBookings"), icon: CalendarDays },
     { href: `/${locale}/dashboard/customers`, label: t("manageCustomers"), icon: Users },
     { href: `/${locale}/dashboard/reviews`, label: t("manageReviews"), icon: Star },
@@ -52,6 +55,7 @@ export default function DashboardShell({
     { href: `/${locale}/dashboard`, label: t("overview"), icon: LayoutDashboard },
     { href: `/${locale}/dashboard/chalets`, label: t("myChalets"), icon: Building },
     { href: `/${locale}/dashboard/calendar`, label: t("manageCalendar"), icon: CalendarCheck },
+    { href: `/${locale}/dashboard/water`, label: isAr ? "وايت الماء" : "Water Tanker", icon: Droplets },
     { href: `/${locale}/dashboard/bookings`, label: t("myBookings"), icon: CalendarDays },
     { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
   ];

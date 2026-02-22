@@ -14,24 +14,28 @@ export async function GET() {
   const bookingFilter = isOwner
     ? { chalet: { ownerId: session.user.id } }
     : {};
+  const waterFilter = isOwner
+    ? { chalet: { ownerId: session.user.id } }
+    : {};
 
   if (role !== "ADMIN" && role !== "OWNER") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [totalChalets, totalBookings, revenueResult, recentBookings] =
+  const [totalChalets, totalBookings, blockedBookings, waterResult, recentBookings, settings] =
     await Promise.all([
       prisma.chalet.count({ where: ownerFilter }),
-      prisma.booking.count({ where: bookingFilter }),
-      prisma.booking.aggregate({
-        where: {
-          ...bookingFilter,
-          status: { in: ["CONFIRMED", "COMPLETED"] },
-        },
-        _sum: { totalPrice: true },
+      prisma.booking.count({ where: { ...bookingFilter, status: "BLOCKED" } }),
+      prisma.booking.findMany({
+        where: { ...bookingFilter, status: "BLOCKED" },
+        select: { deposit: true, remainingAmount: true, paymentMethod: true },
+      }),
+      prisma.waterExpense.aggregate({
+        where: waterFilter,
+        _sum: { amount: true },
       }),
       prisma.booking.findMany({
-        where: bookingFilter,
+        where: { ...bookingFilter, status: "BLOCKED" },
         include: {
           user: { select: { name: true } },
           chalet: { select: { nameAr: true, nameEn: true } },
@@ -39,22 +43,58 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
+      prisma.siteSetting.findMany({
+        where: {
+          key: {
+            in: [
+              "payment_cash_location",
+              "payment_card_location",
+              "payment_transfer_location",
+            ],
+          },
+        },
+      }),
     ]);
 
-  const totalRevenue = revenueResult._sum.totalPrice || 0;
+  // Calculate revenue breakdown from BLOCKED bookings
+  let totalRevenue = 0;
+  const breakdown: Record<string, number> = { cash: 0, transfer: 0, card: 0 };
+  for (const b of blockedBookings) {
+    const amount = Number(b.deposit || 0) + Number(b.remainingAmount || 0);
+    totalRevenue += amount;
+    const method = b.paymentMethod || "";
+    if (method in breakdown) {
+      breakdown[method] += amount;
+    }
+  }
+
+  const waterTotal = Number(waterResult._sum.amount || 0);
+
+  // Payment locations from settings
+  const paymentLocations: Record<string, string> = {};
+  for (const s of settings) {
+    paymentLocations[s.key] = s.value;
+  }
 
   return NextResponse.json({
     totalChalets,
     totalBookings,
-    totalRevenue: Number(totalRevenue),
+    totalRevenue,
+    revenueBreakdown: {
+      cash: breakdown.cash,
+      transfer: breakdown.transfer,
+      card: breakdown.card,
+      water: waterTotal,
+    },
+    paymentLocations,
     recentBookings: recentBookings.map((b) => ({
       id: b.id.slice(0, 8).toUpperCase(),
-      customer: b.user?.name || "-",
+      customer: b.guestName || b.user?.name || "-",
       chaletAr: b.chalet.nameAr,
       chaletEn: b.chalet.nameEn,
       date: b.checkIn.toISOString().split("T")[0],
       status: b.status.toLowerCase(),
-      amount: Number(b.totalPrice),
+      amount: Number(b.deposit || 0) + Number(b.remainingAmount || 0),
     })),
   });
 }
