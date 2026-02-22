@@ -90,6 +90,14 @@ const hijriDayNumFormatter = new Intl.DateTimeFormat("ar-u-ca-islamic-umalqura",
   day: "numeric",
 });
 
+// Local date string helper (avoids UTC timezone shift with toISOString)
+function toDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Custom DayButton that shows both Gregorian and Hijri day numbers
 function HijriDayButton({ children, day, ...rest }: React.ComponentProps<typeof DayButtonType>) {
   const hijriNum = hijriDayNumFormatter.format(day.date);
@@ -199,11 +207,11 @@ export default function DashboardCalendarPage() {
 
         if (Array.isArray(allBookedRanges)) {
           for (const range of allBookedRanges as BookedRange[]) {
-            const start = new Date(range.checkIn);
-            const end = new Date(range.checkOut);
+            const start = new Date(range.checkIn + "T00:00:00");
+            const end = new Date(range.checkOut + "T00:00:00");
             const d = new Date(start);
             while (d < end) {
-              const dateStr = d.toISOString().split("T")[0];
+              const dateStr = toDateStr(d);
               if (blockedSet.has(dateStr)) {
                 ownerBlockedDates.push(new Date(d));
               } else {
@@ -226,13 +234,13 @@ export default function DashboardCalendarPage() {
   }, [selectedSlug, isAr]);
 
   const isCustomerBooked = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
-    return customerBookedDates.some((d) => d.toISOString().split("T")[0] === dateStr);
+    const dateStr = toDateStr(date);
+    return customerBookedDates.some((d) => toDateStr(d) === dateStr);
   };
 
   const isBlocked = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
-    return blockedDates.some((d) => d.toISOString().split("T")[0] === dateStr);
+    const dateStr = toDateStr(date);
+    return blockedDates.some((d) => toDateStr(d) === dateStr);
   };
 
   const selectedAvailable = (selectedDates || []).filter(
@@ -249,7 +257,7 @@ export default function DashboardCalendarPage() {
 
   // Show details of a blocked date
   const showBlockedDetails = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = toDateStr(date);
     const info = blockedInfo.get(dateStr);
     if (info) {
       setDetailsDate(info);
@@ -270,7 +278,7 @@ export default function DashboardCalendarPage() {
 
     const datesToBlock = (selectedDates || [])
       .filter((d) => !isCustomerBooked(d) && !isBlocked(d))
-      .map((d) => d.toISOString().split("T")[0]);
+      .map((d) => toDateStr(d));
 
     if (datesToBlock.length === 0) return;
 
@@ -301,7 +309,7 @@ export default function DashboardCalendarPage() {
           newMap.set(d, {
             id: "tmp-" + d,
             date: d,
-            checkOut: nextDay.toISOString().split("T")[0],
+            checkOut: toDateStr(nextDay),
             guestName: formData.guestName,
             guestPhone: formData.guestPhone,
             paymentMethod: formData.paymentMethod,
@@ -337,7 +345,7 @@ export default function DashboardCalendarPage() {
 
     const datesToUnblock = (selectedDates || [])
       .filter((d) => isBlocked(d))
-      .map((d) => d.toISOString().split("T")[0]);
+      .map((d) => toDateStr(d));
 
     if (datesToUnblock.length === 0) return;
 
@@ -351,7 +359,7 @@ export default function DashboardCalendarPage() {
 
       if (res.ok) {
         setBlockedDates((prev) =>
-          prev.filter((d) => !datesToUnblock.includes(d.toISOString().split("T")[0]))
+          prev.filter((d) => !datesToUnblock.includes(toDateStr(d)))
         );
         const newMap = new Map(blockedInfo);
         for (const d of datesToUnblock) newMap.delete(d);
@@ -384,7 +392,7 @@ export default function DashboardCalendarPage() {
       });
       if (res.ok) {
         setBlockedDates((prev) =>
-          prev.filter((d) => d.toISOString().split("T")[0] !== dateStr)
+          prev.filter((d) => toDateStr(d) !== dateStr)
         );
         const newMap = new Map(blockedInfo);
         newMap.delete(dateStr);
