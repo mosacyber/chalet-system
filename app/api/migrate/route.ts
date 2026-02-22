@@ -2,32 +2,6 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-// TEMPORARY: V4 migration - guest info columns (remove after running)
-export async function GET() {
-  const results: string[] = [];
-  const run = async (label: string, sql: string) => {
-    try {
-      await prisma.$executeRawUnsafe(sql);
-      results.push(`${label}: OK`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown";
-      if (msg.includes("already exists") || msg.includes("duplicate")) {
-        results.push(`${label}: already exists (skipped)`);
-      } else {
-        results.push(`${label}: ERROR - ${msg}`);
-      }
-    }
-  };
-
-  await run("Add guestName", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "guestName" TEXT`);
-  await run("Add guestPhone", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "guestPhone" TEXT`);
-  await run("Add paymentMethod", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT`);
-  await run("Add deposit", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "deposit" DECIMAL(10,2)`);
-  await run("Add remainingAmount", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingAmount" DECIMAL(10,2)`);
-
-  return NextResponse.json({ message: "V4 migration complete", results });
-}
-
 export async function POST(request: Request) {
   const auth = request.headers.get("x-migrate-key");
   if (auth !== (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET)) {
