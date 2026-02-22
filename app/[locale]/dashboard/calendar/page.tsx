@@ -31,6 +31,9 @@ import {
   Phone,
   User,
   X,
+  Eye,
+  Printer,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,12 +43,15 @@ interface BookedRange {
 }
 
 interface BlockedDateInfo {
+  id: string;
   date: string;
+  checkOut: string;
   guestName: string;
   guestPhone: string;
   paymentMethod: string;
   deposit: number;
   remainingAmount: number;
+  createdAt: string;
 }
 
 interface ChaletOption {
@@ -267,13 +273,18 @@ export default function DashboardCalendarPage() {
         // Update info map
         const newMap = new Map(blockedInfo);
         for (const d of datesToBlock) {
+          const nextDay = new Date(d + "T00:00:00");
+          nextDay.setDate(nextDay.getDate() + 1);
           newMap.set(d, {
+            id: "tmp-" + d,
             date: d,
+            checkOut: nextDay.toISOString().split("T")[0],
             guestName: formData.guestName,
             guestPhone: formData.guestPhone,
             paymentMethod: formData.paymentMethod,
             deposit: Number(formData.deposit) || 0,
             remainingAmount: Number(formData.remainingAmount) || 0,
+            createdAt: new Date().toISOString(),
           });
         }
         setBlockedInfo(newMap);
@@ -370,6 +381,89 @@ export default function DashboardCalendarPage() {
       card: isAr ? "شبكة" : "Card",
     };
     return labels[method] || method;
+  };
+
+  // Bookings list from blocked info
+  const bookingsList = useMemo(() => {
+    return Array.from(blockedInfo.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [blockedInfo]);
+
+  // Get selected chalet name
+  const selectedChaletName = useMemo(() => {
+    const c = chalets.find((ch) => ch.slug === selectedSlug);
+    return c ? (isAr ? c.nameAr : c.nameEn) : "";
+  }, [chalets, selectedSlug, isAr]);
+
+  // Print invoice
+  const printInvoice = (booking: BlockedDateInfo) => {
+    const siteName = isAr ? "شاليهات الراحة" : "Al-Raha Chalets";
+    const invoiceTitle = isAr ? "فاتورة حجز" : "Booking Invoice";
+    const hijriDate = getHijriDay(new Date(booking.date + "T00:00:00"));
+    const total = booking.deposit + booking.remainingAmount;
+    const payLabel = paymentMethodLabel(booking.paymentMethod);
+    const currency = isAr ? "ريال" : "SAR";
+    const dir = isAr ? "rtl" : "ltr";
+
+    const html = `<!DOCTYPE html>
+<html dir="${dir}" lang="${isAr ? "ar" : "en"}">
+<head>
+<meta charset="utf-8">
+<title>${invoiceTitle}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 40px; color: #1a1a1a; direction: ${dir}; }
+  .invoice { max-width: 600px; margin: 0 auto; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .header { background: #1e293b; color: white; padding: 24px; text-align: center; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+  .header h2 { font-size: 14px; font-weight: normal; opacity: 0.8; }
+  .section { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; }
+  .section:last-child { border-bottom: none; }
+  .row { display: flex; justify-content: space-between; padding: 8px 0; }
+  .row .label { color: #6b7280; font-size: 14px; }
+  .row .value { font-weight: 600; font-size: 14px; }
+  .total-row { display: flex; justify-content: space-between; padding: 12px 0; border-top: 2px solid #1e293b; margin-top: 8px; }
+  .total-row .label { font-size: 16px; font-weight: 700; }
+  .total-row .value { font-size: 18px; font-weight: 700; color: #059669; }
+  .footer { text-align: center; padding: 16px 24px; background: #f9fafb; color: #6b7280; font-size: 12px; }
+  .booking-id { font-family: monospace; font-size: 12px; opacity: 0.7; margin-top: 4px; }
+  @media print { body { padding: 0; } .invoice { border: none; } }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="header">
+    <h1>${siteName}</h1>
+    <h2>${invoiceTitle}</h2>
+    <div class="booking-id">#${booking.id.slice(-8).toUpperCase()}</div>
+  </div>
+  <div class="section">
+    <div class="row"><span class="label">${isAr ? "الشاليه" : "Chalet"}</span><span class="value">${selectedChaletName}</span></div>
+    <div class="row"><span class="label">${isAr ? "التاريخ" : "Date"}</span><span class="value">${booking.date}</span></div>
+    <div class="row"><span class="label">${isAr ? "التاريخ الهجري" : "Hijri Date"}</span><span class="value">${hijriDate}</span></div>
+  </div>
+  <div class="section">
+    ${booking.guestName ? `<div class="row"><span class="label">${isAr ? "اسم الضيف" : "Guest Name"}</span><span class="value">${booking.guestName}</span></div>` : ""}
+    ${booking.guestPhone ? `<div class="row"><span class="label">${isAr ? "رقم الجوال" : "Phone"}</span><span class="value" dir="ltr">${booking.guestPhone}</span></div>` : ""}
+  </div>
+  <div class="section">
+    ${booking.paymentMethod ? `<div class="row"><span class="label">${isAr ? "طريقة الدفع" : "Payment Method"}</span><span class="value">${payLabel}</span></div>` : ""}
+    <div class="row"><span class="label">${isAr ? "العربون" : "Deposit"}</span><span class="value">${booking.deposit.toLocaleString()} ${currency}</span></div>
+    <div class="row"><span class="label">${isAr ? "الباقي" : "Remaining"}</span><span class="value">${booking.remainingAmount.toLocaleString()} ${currency}</span></div>
+    <div class="total-row"><span class="label">${isAr ? "الإجمالي" : "Total"}</span><span class="value">${total.toLocaleString()} ${currency}</span></div>
+  </div>
+  <div class="footer">
+    ${isAr ? "شكراً لتعاملكم معنا" : "Thank you for your business"} &bull; ${new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US")}
+  </div>
+</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body>
+</html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
   };
 
   // Hijri month display
@@ -595,6 +689,125 @@ export default function DashboardCalendarPage() {
         </div>
       )}
 
+      {/* Bookings List Table */}
+      {selectedSlug && !loading && bookingsList.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t("bookingsList")}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-sm text-muted-foreground">
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("bookingDate")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("guestName")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("guestPhone")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("paymentMethodLabel")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("depositAmount")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("remainingAmountLabel")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t("totalAmount")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {isAr ? "الإجراءات" : "Actions"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookingsList.map((booking) => (
+                    <tr key={booking.id || booking.date} className="border-b last:border-0">
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium">{booking.date}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {getHijriDay(new Date(booking.date + "T00:00:00"))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {booking.guestName || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm" dir="ltr">
+                        {booking.guestPhone || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {booking.paymentMethod ? paymentMethodLabel(booking.paymentMethod) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-green-600 font-medium">
+                        {booking.deposit > 0 ? `${booking.deposit.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-orange-500 font-medium">
+                        {booking.remainingAmount > 0 ? `${booking.remainingAmount.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-bold">
+                        {(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={t("bookingDetails")}
+                            onClick={() => {
+                              setDetailsDate(booking);
+                              setShowDetailsDialog(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={t("printInvoice")}
+                            onClick={() => printInvoice(booking)}
+                          >
+                            <Printer className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            title={t("deleteBooking")}
+                            onClick={() => {
+                              if (confirm(isAr ? "هل أنت متأكد من حذف هذا الحجز؟" : "Are you sure you want to delete this booking?")) {
+                                handleUnblockSingle(booking.date);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedSlug && !loading && bookingsList.length === 0 && blockedDates.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            {t("noBookings")}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Booking Dialog */}
       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
         <DialogContent className="sm:max-w-md">
@@ -775,20 +988,30 @@ export default function DashboardCalendarPage() {
                 </div>
               )}
 
-              {/* Remove button */}
-              <Button
-                onClick={() => handleUnblockSingle(detailsDate.date)}
-                disabled={saving}
-                variant="outline"
-                className="w-full gap-2 text-destructive"
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-                {isAr ? "إلغاء الحجز" : "Remove Booking"}
-              </Button>
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => printInvoice(detailsDate)}
+                  variant="outline"
+                  className="flex-1 gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  {t("printInvoice")}
+                </Button>
+                <Button
+                  onClick={() => handleUnblockSingle(detailsDate.date)}
+                  disabled={saving}
+                  variant="outline"
+                  className="flex-1 gap-2 text-destructive"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  {t("deleteBooking")}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

@@ -207,7 +207,14 @@
     "card": "Card",
     "depositAmount": "Deposit",
     "remainingAmountLabel": "Remaining",
-    "bookingDetails": "Booking Details"
+    "bookingDetails": "Booking Details",
+    "bookingsList": "Bookings List",
+    "bookingDate": "Date",
+    "totalAmount": "Total",
+    "printInvoice": "Print Invoice",
+    "deleteBooking": "Delete Booking",
+    "noBookings": "No bookings",
+    "bookingNumber": "Booking #"
   },
   "reviews": {
     "title": "Reviews",

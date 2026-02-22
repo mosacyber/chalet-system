@@ -207,7 +207,14 @@
     "card": "شبكة",
     "depositAmount": "العربون",
     "remainingAmountLabel": "الباقي",
-    "bookingDetails": "تفاصيل الحجز"
+    "bookingDetails": "تفاصيل الحجز",
+    "bookingsList": "قائمة الحجوزات",
+    "bookingDate": "التاريخ",
+    "totalAmount": "الإجمالي",
+    "printInvoice": "طباعة فاتورة",
+    "deleteBooking": "حذف الحجز",
+    "noBookings": "لا توجد حجوزات",
+    "bookingNumber": "رقم الحجز"
   },
   "reviews": {
     "title": "التقييمات",

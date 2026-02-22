@@ -48,23 +48,29 @@ export async function GET(
       checkOut: { gte: today },
     },
     select: {
+      id: true,
       checkIn: true,
+      checkOut: true,
       guestName: true,
       guestPhone: true,
       paymentMethod: true,
       deposit: true,
       remainingAmount: true,
+      createdAt: true,
     },
     orderBy: { checkIn: "asc" },
   });
 
   const data = blocked.map((b) => ({
+    id: b.id,
     date: b.checkIn.toISOString().split("T")[0],
+    checkOut: b.checkOut.toISOString().split("T")[0],
     guestName: b.guestName || "",
     guestPhone: b.guestPhone || "",
     paymentMethod: b.paymentMethod || "",
     deposit: b.deposit ? Number(b.deposit) : 0,
     remainingAmount: b.remainingAmount ? Number(b.remainingAmount) : 0,
+    createdAt: b.createdAt.toISOString(),
   }));
 
   return NextResponse.json(data);
