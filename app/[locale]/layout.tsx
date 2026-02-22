@@ -7,8 +7,7 @@ import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
 import AuthProvider from "@/components/providers/AuthProvider";
 import ThemeProvider from "@/components/providers/ThemeProvider";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -116,11 +115,7 @@ export default async function LocaleLayout({
         <ThemeProvider>
           <AuthProvider>
             <NextIntlClientProvider messages={messages}>
-              <div className="flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
+              <LayoutWrapper>{children}</LayoutWrapper>
               <Toaster position={isAr ? "bottom-left" : "bottom-right"} />
             </NextIntlClientProvider>
           </AuthProvider>
