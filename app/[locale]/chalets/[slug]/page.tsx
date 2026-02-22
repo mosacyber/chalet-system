@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import ChaletDetail from "@/components/chalets/ChaletDetail";
 import JsonLd from "@/components/seo/JsonLd";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 
 export async function generateMetadata({
@@ -23,7 +24,13 @@ export async function generateMetadata({
     },
   });
 
-  if (!chalet || !chalet.isActive) return { title: "Not Found" };
+  if (!chalet) return { title: "Not Found" };
+
+  if (!chalet.isActive) {
+    const session = await auth();
+    const role = (session?.user as { role?: string })?.role;
+    if (role !== "ADMIN" && role !== "OWNER") return { title: "Not Found" };
+  }
 
   const isAr = locale === "ar";
   const name = isAr ? chalet.nameAr : chalet.nameEn;
@@ -64,8 +71,16 @@ export default async function ChaletPage({
     },
   });
 
-  if (!chalet || !chalet.isActive) {
+  if (!chalet) {
     notFound();
+  }
+
+  if (!chalet.isActive) {
+    const session = await auth();
+    const role = (session?.user as { role?: string })?.role;
+    if (role !== "ADMIN" && role !== "OWNER") {
+      notFound();
+    }
   }
 
   const avgRating =
