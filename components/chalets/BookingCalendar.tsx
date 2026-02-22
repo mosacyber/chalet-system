@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import type { DateRange } from "react-day-picker";
+import { ar as arLocale } from "date-fns/locale/ar";
 
 interface BookedRange {
   checkIn: string;
@@ -112,6 +113,7 @@ export default function BookingCalendar({
               "!bg-red-100 !text-red-400 !opacity-100 line-through dark:!bg-red-950 dark:!text-red-400",
           }}
           numberOfMonths={1}
+          locale={isAr ? arLocale : undefined}
           dir={isAr ? "rtl" : "ltr"}
           className="rounded-md border p-3"
         />

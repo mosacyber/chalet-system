@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2, Lock, Unlock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ar as arLocale } from "date-fns/locale/ar";
 
 interface BookedRange {
   checkIn: string;
@@ -259,6 +260,7 @@ export default function ChaletCalendarPage() {
                       "!bg-red-100 !text-red-500 !opacity-100 dark:!bg-red-950 dark:!text-red-400",
                   }}
                   numberOfMonths={2}
+                  locale={isAr ? arLocale : undefined}
                   dir={isAr ? "rtl" : "ltr"}
                   className="rounded-md border p-3"
                 />

@@ -38,6 +38,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ar as arLocale } from "date-fns/locale/ar";
 
 interface BookedRange {
   checkIn: string;
@@ -138,12 +139,12 @@ export default function DashboardCalendarPage() {
     remainingPaymentMethod: "",
   });
 
-  // Responsive: 1 month on mobile, 2 on md+
-  const [isMd, setIsMd] = useState(false);
+  // Responsive: 1 month on mobile/tablet, 2 on xl+ (1280px)
+  const [isXl, setIsXl] = useState(false);
   useEffect(() => {
-    const mql = window.matchMedia("(min-width: 768px)");
-    setIsMd(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMd(e.matches);
+    const mql = window.matchMedia("(min-width: 1280px)");
+    setIsXl(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsXl(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
@@ -601,9 +602,9 @@ export default function DashboardCalendarPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Calendar */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg">
@@ -635,7 +636,8 @@ export default function DashboardCalendarPage() {
                     components={{
                       DayButton: HijriDayButton,
                     }}
-                    numberOfMonths={isMd ? 2 : 1}
+                    numberOfMonths={isXl ? 2 : 1}
+                    locale={isAr ? arLocale : undefined}
                     dir={isAr ? "rtl" : "ltr"}
                     className="rounded-md border p-3 [--cell-size:2.75rem]"
                     onMonthChange={setCurrentMonth}
@@ -673,8 +675,8 @@ export default function DashboardCalendarPage() {
           </div>
 
           {/* Sidebar - Actions */}
-          <div className="lg:col-span-1">
-            <Card className="lg:sticky lg:top-20">
+          <div className="xl:col-span-1">
+            <Card className="xl:sticky xl:top-20">
               <CardHeader>
                 <CardTitle className="text-lg">
                   {isAr ? "الإجراءات" : "Actions"}
