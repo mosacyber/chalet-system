@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Eye, Loader2, Power, Trash2 } from "lucide-react";
+import { Plus, Edit, Eye, Loader2, Power, Trash2, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -178,6 +178,18 @@ export default function ManageChaletsPage() {
                               title={isAr ? "تعديل" : "Edit"}
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link
+                            href={`/${locale}/dashboard/chalets/${chalet.slug}/calendar`}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title={t("manageCalendar")}
+                            >
+                              <CalendarDays className="h-4 w-4 text-orange-500" />
                             </Button>
                           </Link>
                           <Button

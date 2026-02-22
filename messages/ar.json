@@ -188,7 +188,14 @@
     "addChaletSuccess": "تم إضافة الشاليه بنجاح!",
     "imageUrls": "روابط الصور",
     "imageUrlsHint": "أضف رابط صورة واحد في كل سطر",
-    "selectAmenities": "اختر المرافق المتاحة"
+    "selectAmenities": "اختر المرافق المتاحة",
+    "manageCalendar": "إدارة التقويم",
+    "blockDates": "حجب التواريخ",
+    "unblockDates": "إلغاء الحجب",
+    "blockedByOwner": "محجوب من المالك",
+    "customerBooking": "حجز عميل",
+    "availableDay": "متاح",
+    "selectDatesToBlock": "اختر الأيام التي تريد حجبها"
   },
   "reviews": {
     "title": "التقييمات",

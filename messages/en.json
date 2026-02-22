@@ -188,7 +188,14 @@
     "addChaletSuccess": "Chalet added successfully!",
     "imageUrls": "Image URLs",
     "imageUrlsHint": "Add one image URL per line",
-    "selectAmenities": "Select available amenities"
+    "selectAmenities": "Select available amenities",
+    "manageCalendar": "Manage Calendar",
+    "blockDates": "Block Dates",
+    "unblockDates": "Unblock Dates",
+    "blockedByOwner": "Blocked by owner",
+    "customerBooking": "Customer booking",
+    "availableDay": "Available",
+    "selectDatesToBlock": "Select days you want to block"
   },
   "reviews": {
     "title": "Reviews",

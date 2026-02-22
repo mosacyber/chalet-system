@@ -22,7 +22,7 @@ export async function GET(
   const bookings = await prisma.booking.findMany({
     where: {
       chaletId: chalet.id,
-      status: { in: ["PENDING", "CONFIRMED"] },
+      status: { in: ["PENDING", "CONFIRMED", "BLOCKED"] },
       checkOut: { gte: today },
     },
     select: {
