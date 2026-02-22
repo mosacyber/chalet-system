@@ -84,8 +84,10 @@ export async function PUT(request: Request) {
   await run("Add ownerId index", `CREATE INDEX IF NOT EXISTS "Chalet_ownerId_idx" ON "Chalet"("ownerId")`);
   await run("Update default role", `ALTER TABLE "User" ALTER COLUMN "role" SET DEFAULT 'OWNER'`);
   await run("Upgrade CUSTOMER to OWNER", `UPDATE "User" SET "role" = 'OWNER' WHERE "role" = 'CUSTOMER'`);
+  // V3: Add BLOCKED to BookingStatus
+  await run("Add BLOCKED status", `ALTER TYPE "BookingStatus" ADD VALUE IF NOT EXISTS 'BLOCKED'`);
 
-  return NextResponse.json({ message: "V2 migration complete", results });
+  return NextResponse.json({ message: "V2/V3 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)
