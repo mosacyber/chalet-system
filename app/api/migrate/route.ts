@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const auth = request.headers.get("x-migrate-key");
-  if (auth !== process.env.NEXTAUTH_SECRET) {
+  if (auth !== (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 // PUT: Add OWNER role and ownerId column (v2 migration)
 export async function PUT(request: Request) {
   const authHeader = request.headers.get("x-migrate-key");
-  if (authHeader !== process.env.NEXTAUTH_SECRET) {
+  if (authHeader !== (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -93,7 +93,7 @@ export async function PUT(request: Request) {
 // PATCH: Seed admin account (one-time use)
 export async function PATCH(request: Request) {
   const auth = request.headers.get("x-migrate-key");
-  if (auth !== process.env.NEXTAUTH_SECRET) {
+  if (auth !== (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
