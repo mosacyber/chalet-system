@@ -104,6 +104,10 @@
     "cancelled": "Cancelled",
     "completed": "Completed",
     "selectDates": "Select Dates",
+    "selectDatesRange": "Select check-in and check-out dates",
+    "booked": "Booked",
+    "selected": "Selected",
+    "nights": "nights",
     "notAvailable": "Not available on these dates"
   },
   "auth": {

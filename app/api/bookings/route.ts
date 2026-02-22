@@ -1,27 +1,32 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  // Demo data
-  const bookings = [
-    {
-      id: "BK-001",
-      chaletId: "1",
-      userId: "user-1",
-      checkIn: "2024-03-15",
-      checkOut: "2024-03-18",
-      guests: 8,
-      totalPrice: 2400,
-      status: "confirmed",
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where: { userId: session.user.id },
+    include: {
+      chalet: { select: { nameAr: true, nameEn: true, slug: true } },
     },
-  ];
+    orderBy: { createdAt: "desc" },
+  });
 
   return NextResponse.json(bookings);
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
 
-  // Validate required fields
   if (!body.chaletId || !body.checkIn || !body.checkOut || !body.guests) {
     return NextResponse.json(
       { error: "Missing required fields" },
@@ -29,12 +34,60 @@ export async function POST(request: Request) {
     );
   }
 
-  const booking = {
-    id: `BK-${Date.now()}`,
-    ...body,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
+  const chalet = await prisma.chalet.findUnique({
+    where: { id: body.chaletId },
+    select: { pricePerNight: true, weekendPrice: true },
+  });
+
+  if (!chalet) {
+    return NextResponse.json({ error: "Chalet not found" }, { status: 404 });
+  }
+
+  const checkIn = new Date(body.checkIn);
+  const checkOut = new Date(body.checkOut);
+
+  // Check for overlapping bookings
+  const overlap = await prisma.booking.findFirst({
+    where: {
+      chaletId: body.chaletId,
+      status: { in: ["PENDING", "CONFIRMED"] },
+      checkIn: { lt: checkOut },
+      checkOut: { gt: checkIn },
+    },
+  });
+
+  if (overlap) {
+    return NextResponse.json(
+      { error: "Dates already booked" },
+      { status: 409 }
+    );
+  }
+
+  // Calculate total price (weekend = Fri/Sat)
+  let total = 0;
+  const d = new Date(checkIn);
+  while (d < checkOut) {
+    const day = d.getDay();
+    const isWeekend = day === 5 || day === 6;
+    const price =
+      isWeekend && chalet.weekendPrice
+        ? Number(chalet.weekendPrice)
+        : Number(chalet.pricePerNight);
+    total += price;
+    d.setDate(d.getDate() + 1);
+  }
+
+  const booking = await prisma.booking.create({
+    data: {
+      userId: session.user.id!,
+      chaletId: body.chaletId,
+      checkIn,
+      checkOut,
+      guests: Number(body.guests),
+      totalPrice: total,
+      notes: body.notes || null,
+    },
+  });
 
   return NextResponse.json(
     { message: "Booking created", data: booking },

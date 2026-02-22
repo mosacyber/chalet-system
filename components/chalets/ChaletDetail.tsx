@@ -28,6 +28,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
+import BookingCalendar from "./BookingCalendar";
 
 const AMENITY_ICONS: Record<string, React.ElementType> = {
   wifi: Wifi,
@@ -245,12 +246,12 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
-                <Link href={`/${locale}/booking/${chalet.id}`}>
-                  <Button className="w-full gap-2" size="lg">
-                    <CalendarDays className="h-4 w-4" />
-                    {tc("bookNow")}
-                  </Button>
-                </Link>
+                <BookingCalendar
+                  chaletId={chalet.id}
+                  slug={chalet.slug}
+                  pricePerNight={chalet.pricePerNight}
+                  weekendPrice={chalet.weekendPrice}
+                />
 
                 <div className="rounded-lg bg-muted p-4 text-center text-sm text-muted-foreground">
                   {isAr

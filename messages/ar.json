@@ -104,6 +104,10 @@
     "cancelled": "ملغي",
     "completed": "مكتمل",
     "selectDates": "اختر التواريخ",
+    "selectDatesRange": "اختر تاريخ الوصول والمغادرة",
+    "booked": "محجوز",
+    "selected": "محدد",
+    "nights": "ليالي",
     "notAvailable": "غير متاح في هذه التواريخ"
   },
   "auth": {
