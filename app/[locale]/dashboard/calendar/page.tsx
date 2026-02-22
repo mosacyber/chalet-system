@@ -126,6 +126,16 @@ export default function DashboardCalendarPage() {
     remainingAmount: "",
   });
 
+  // Responsive: 1 month on mobile, 2 on md+
+  const [isMd, setIsMd] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px)");
+    setIsMd(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMd(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
   // Current displayed month for Hijri
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -550,7 +560,7 @@ export default function DashboardCalendarPage() {
                     components={{
                       DayButton: HijriDayButton,
                     }}
-                    numberOfMonths={2}
+                    numberOfMonths={isMd ? 2 : 1}
                     dir={isAr ? "rtl" : "ltr"}
                     className="rounded-md border p-3 [--cell-size:2.75rem]"
                     onMonthChange={setCurrentMonth}
@@ -589,7 +599,7 @@ export default function DashboardCalendarPage() {
 
           {/* Sidebar - Actions */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
+            <Card className="lg:sticky lg:top-20">
               <CardHeader>
                 <CardTitle className="text-lg">
                   {isAr ? "الإجراءات" : "Actions"}
@@ -696,34 +706,52 @@ export default function DashboardCalendarPage() {
             <CardTitle className="text-lg">{t("bookingsList")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Mobile: Card layout */}
+            <div className="space-y-3 p-4 md:hidden">
+              {bookingsList.map((booking) => (
+                <div key={booking.id || booking.date} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">{booking.date}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getHijriDay(new Date(booking.date + "T00:00:00"))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setDetailsDate(booking); setShowDetailsDialog(true); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => printInvoice(booking)}>
+                        <Printer className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { if (confirm(isAr ? "هل أنت متأكد من حذف هذا الحجز؟" : "Delete this booking?")) handleUnblockSingle(booking.date); }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {booking.guestName && <div className="text-sm"><span className="text-muted-foreground">{t("guestName")}: </span>{booking.guestName}</div>}
+                  {booking.guestPhone && <div className="text-sm" dir="ltr"><span className="text-muted-foreground" dir={isAr ? "rtl" : "ltr"}>{t("guestPhone")}: </span>{booking.guestPhone}</div>}
+                  <div className="flex items-center justify-between text-sm pt-1 border-t">
+                    <span className="text-green-600">{t("depositAmount")}: {booking.deposit.toLocaleString()}</span>
+                    <span className="font-bold">{(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Table layout */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b text-sm text-muted-foreground">
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("bookingDate")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("guestName")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("guestPhone")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("paymentMethodLabel")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("depositAmount")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("remainingAmountLabel")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t("totalAmount")}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {isAr ? "الإجراءات" : "Actions"}
-                    </th>
+                    <th className="px-4 py-3 text-start font-medium">{t("bookingDate")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("guestName")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("guestPhone")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("paymentMethodLabel")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("depositAmount")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("remainingAmountLabel")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{t("totalAmount")}</th>
+                    <th className="px-4 py-3 text-start font-medium">{isAr ? "الإجراءات" : "Actions"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -731,62 +759,23 @@ export default function DashboardCalendarPage() {
                     <tr key={booking.id || booking.date} className="border-b last:border-0">
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium">{booking.date}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {getHijriDay(new Date(booking.date + "T00:00:00"))}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{getHijriDay(new Date(booking.date + "T00:00:00"))}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {booking.guestName || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm" dir="ltr">
-                        {booking.guestPhone || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {booking.paymentMethod ? paymentMethodLabel(booking.paymentMethod) : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-green-600 font-medium">
-                        {booking.deposit > 0 ? `${booking.deposit.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-orange-500 font-medium">
-                        {booking.remainingAmount > 0 ? `${booking.remainingAmount.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-bold">
-                        {(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{booking.guestName || "-"}</td>
+                      <td className="px-4 py-3 text-sm" dir="ltr">{booking.guestPhone || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{booking.paymentMethod ? paymentMethodLabel(booking.paymentMethod) : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-green-600 font-medium">{booking.deposit > 0 ? `${booking.deposit.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-orange-500 font-medium">{booking.remainingAmount > 0 ? `${booking.remainingAmount.toLocaleString()} ${isAr ? "ريال" : "SAR"}` : "-"}</td>
+                      <td className="px-4 py-3 text-sm font-bold">{(booking.deposit + booking.remainingAmount).toLocaleString()} {isAr ? "ريال" : "SAR"}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title={t("bookingDetails")}
-                            onClick={() => {
-                              setDetailsDate(booking);
-                              setShowDetailsDialog(true);
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title={t("bookingDetails")} onClick={() => { setDetailsDate(booking); setShowDetailsDialog(true); }}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title={t("printInvoice")}
-                            onClick={() => printInvoice(booking)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title={t("printInvoice")} onClick={() => printInvoice(booking)}>
                             <Printer className="h-4 w-4 text-blue-500" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            title={t("deleteBooking")}
-                            onClick={() => {
-                              if (confirm(isAr ? "هل أنت متأكد من حذف هذا الحجز؟" : "Are you sure you want to delete this booking?")) {
-                                handleUnblockSingle(booking.date);
-                              }
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title={t("deleteBooking")} onClick={() => { if (confirm(isAr ? "هل أنت متأكد من حذف هذا الحجز؟" : "Are you sure you want to delete this booking?")) handleUnblockSingle(booking.date); }}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

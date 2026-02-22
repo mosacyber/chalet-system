@@ -36,7 +36,7 @@ export default function Header() {
           className="flex items-center gap-2 text-xl font-bold text-primary"
         >
           <Building className="h-6 w-6" />
-          <span>{t("siteName")}</span>
+          <span className="truncate">{t("siteName")}</span>
         </Link>
 
         {/* Desktop Nav */}
@@ -112,7 +112,7 @@ export default function Header() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side={locale === "ar" ? "right" : "left"} className="w-72">
+          <SheetContent side={locale === "ar" ? "right" : "left"} className="w-[280px] sm:w-72">
             <div className="flex flex-col gap-4 pt-8">
               <Link
                 href={`/${locale}`}
@@ -128,7 +128,7 @@ export default function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
+                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
                     onClick={() => setOpen(false)}
                   >
                     <link.icon className="h-4 w-4" />

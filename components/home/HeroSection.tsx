@@ -11,7 +11,7 @@ export default function HeroSection() {
   const locale = useLocale();
 
   return (
-    <section className="relative flex min-h-[600px] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-primary/5">
+    <section className="relative flex min-h-[500px] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-primary/5 sm:min-h-[600px]">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
 
@@ -23,7 +23,7 @@ export default function HeroSection() {
         </div>
 
         {/* Title */}
-        <h1 className="mx-auto mb-6 max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
+        <h1 className="mx-auto mb-6 max-w-3xl text-2xl font-bold leading-tight tracking-tight sm:text-3xl md:text-5xl lg:text-6xl">
           {t("heroTitle")}
         </h1>
 
@@ -48,7 +48,7 @@ export default function HeroSection() {
         </div>
 
         {/* Stats */}
-        <div className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-4 sm:mt-16 sm:gap-8 md:grid-cols-4">
           {[
             { value: "+50", label: locale === "ar" ? "شاليه" : "Chalets" },
             { value: "+1000", label: locale === "ar" ? "عميل سعيد" : "Happy Clients" },
@@ -56,7 +56,7 @@ export default function HeroSection() {
             { value: "24/7", label: locale === "ar" ? "دعم فني" : "Support" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="text-3xl font-bold text-primary md:text-4xl">
+              <div className="text-2xl font-bold text-primary sm:text-3xl md:text-4xl">
                 {stat.value}
               </div>
               <div className="mt-1 text-sm text-muted-foreground">

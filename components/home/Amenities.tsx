@@ -41,7 +41,7 @@ export default function Amenities() {
     <section className="py-20">
       <div className="container mx-auto px-4">
         <div className="mb-12 text-center">
-          <h2 className="mb-3 text-3xl font-bold md:text-4xl">
+          <h2 className="mb-3 text-2xl font-bold sm:text-3xl md:text-4xl">
             {t("amenitiesTitle")}
           </h2>
           <p className="text-lg text-muted-foreground">
@@ -49,7 +49,7 @@ export default function Amenities() {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 sm:grid-cols-4 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {amenityKeys.map((key) => {
             const Icon = AMENITY_ICONS[key];
             return (

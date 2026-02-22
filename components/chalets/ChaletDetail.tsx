@@ -99,7 +99,7 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
           <div className="lg:col-span-2">
             {/* Gallery */}
             <div className="mb-6 overflow-hidden rounded-xl">
-              <div className="relative h-[400px] w-full bg-muted">
+              <div className="relative h-56 w-full bg-muted sm:h-80 md:h-[400px]">
                 {chalet.images.length > 0 ? (
                   <Image
                     src={chalet.images[selectedImage]}
@@ -120,7 +120,7 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`relative h-20 w-28 overflow-hidden rounded-md ${
+                      className={`relative h-16 w-20 overflow-hidden rounded-md sm:h-20 sm:w-28 ${
                         selectedImage === index
                           ? "ring-2 ring-primary"
                           : "opacity-70"
@@ -142,7 +142,7 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
             <div className="mb-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="mb-2 text-3xl font-bold">
+                  <h1 className="mb-2 text-xl font-bold sm:text-2xl md:text-3xl">
                     {isAr ? chalet.nameAr : chalet.nameEn}
                   </h1>
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -160,25 +160,25 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
             <Separator className="my-6" />
 
             {/* Details */}
-            <div className="mb-6 grid grid-cols-3 gap-4">
-              <div className="flex flex-col items-center rounded-lg border p-4 text-center">
-                <Users className="mb-2 h-6 w-6 text-primary" />
-                <span className="text-sm text-muted-foreground">{t("capacity")}</span>
-                <span className="text-lg font-semibold">
+            <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="flex flex-col items-center rounded-lg border p-3 text-center sm:p-4">
+                <Users className="mb-1.5 h-5 w-5 text-primary sm:mb-2 sm:h-6 sm:w-6" />
+                <span className="text-xs text-muted-foreground sm:text-sm">{t("capacity")}</span>
+                <span className="text-sm font-semibold sm:text-lg">
                   {chalet.capacity} {t("person")}
                 </span>
               </div>
-              <div className="flex flex-col items-center rounded-lg border p-4 text-center">
-                <BedDouble className="mb-2 h-6 w-6 text-primary" />
-                <span className="text-sm text-muted-foreground">{t("bedrooms")}</span>
-                <span className="text-lg font-semibold">
+              <div className="flex flex-col items-center rounded-lg border p-3 text-center sm:p-4">
+                <BedDouble className="mb-1.5 h-5 w-5 text-primary sm:mb-2 sm:h-6 sm:w-6" />
+                <span className="text-xs text-muted-foreground sm:text-sm">{t("bedrooms")}</span>
+                <span className="text-sm font-semibold sm:text-lg">
                   {chalet.bedrooms} {t("bedroom")}
                 </span>
               </div>
-              <div className="flex flex-col items-center rounded-lg border p-4 text-center">
-                <Bath className="mb-2 h-6 w-6 text-primary" />
-                <span className="text-sm text-muted-foreground">{t("bathrooms")}</span>
-                <span className="text-lg font-semibold">
+              <div className="flex flex-col items-center rounded-lg border p-3 text-center sm:p-4">
+                <Bath className="mb-1.5 h-5 w-5 text-primary sm:mb-2 sm:h-6 sm:w-6" />
+                <span className="text-xs text-muted-foreground sm:text-sm">{t("bathrooms")}</span>
+                <span className="text-sm font-semibold sm:text-lg">
                   {chalet.bathrooms} {t("bathroom")}
                 </span>
               </div>
@@ -218,7 +218,7 @@ export default function ChaletDetail({ chalet }: ChaletDetailProps) {
 
           {/* Sidebar - Booking Card */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
+            <Card className="lg:sticky lg:top-20">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-sm font-normal text-muted-foreground">

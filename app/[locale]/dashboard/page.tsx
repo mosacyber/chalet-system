@@ -110,62 +110,58 @@ export default function DashboardPage() {
               {t("noData")}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-sm text-muted-foreground">
-                    <th className="pb-3 text-start font-medium">#</th>
-                    <th className="pb-3 text-start font-medium">
-                      {isAr ? "العميل" : "Customer"}
-                    </th>
-                    <th className="pb-3 text-start font-medium">
-                      {isAr ? "الشاليه" : "Chalet"}
-                    </th>
-                    <th className="pb-3 text-start font-medium">
-                      {isAr ? "التاريخ" : "Date"}
-                    </th>
-                    <th className="pb-3 text-start font-medium">
-                      {isAr ? "المبلغ" : "Amount"}
-                    </th>
-                    <th className="pb-3 text-start font-medium">
-                      {isAr ? "الحالة" : "Status"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recentBookings.map((booking) => (
-                    <tr key={booking.id} className="border-b last:border-0">
-                      <td className="py-3 text-sm font-medium">{booking.id}</td>
-                      <td className="py-3 text-sm">{booking.customer}</td>
-                      <td className="py-3 text-sm">
-                        {isAr ? booking.chaletAr : booking.chaletEn}
-                      </td>
-                      <td className="py-3 text-sm" dir="ltr">
-                        {booking.date}
-                      </td>
-                      <td className="py-3 text-sm font-medium">
-                        {booking.amount} {tc("sar")}
-                      </td>
-                      <td className="py-3">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            STATUS_COLORS[booking.status] || ""
-                          }`}
-                        >
-                          {tb(
-                            booking.status as
-                              | "pending"
-                              | "confirmed"
-                              | "cancelled"
-                              | "completed"
-                          )}
-                        </span>
-                      </td>
+            <>
+              {/* Mobile: Card layout */}
+              <div className="space-y-3 md:hidden">
+                {data.recentBookings.map((booking) => (
+                  <div key={booking.id} className="rounded-lg border p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{booking.customer}</span>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status] || ""}`}>
+                        {tb(booking.status as "pending" | "confirmed" | "cancelled" | "completed")}
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">{isAr ? booking.chaletAr : booking.chaletEn}</div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span dir="ltr" className="text-muted-foreground">{booking.date}</span>
+                      <span className="font-semibold">{booking.amount} {tc("sar")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b text-sm text-muted-foreground">
+                      <th className="pb-3 text-start font-medium">#</th>
+                      <th className="pb-3 text-start font-medium">{isAr ? "العميل" : "Customer"}</th>
+                      <th className="pb-3 text-start font-medium">{isAr ? "الشاليه" : "Chalet"}</th>
+                      <th className="pb-3 text-start font-medium">{isAr ? "التاريخ" : "Date"}</th>
+                      <th className="pb-3 text-start font-medium">{isAr ? "المبلغ" : "Amount"}</th>
+                      <th className="pb-3 text-start font-medium">{isAr ? "الحالة" : "Status"}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {data.recentBookings.map((booking) => (
+                      <tr key={booking.id} className="border-b last:border-0">
+                        <td className="py-3 text-sm font-medium">{booking.id}</td>
+                        <td className="py-3 text-sm">{booking.customer}</td>
+                        <td className="py-3 text-sm">{isAr ? booking.chaletAr : booking.chaletEn}</td>
+                        <td className="py-3 text-sm" dir="ltr">{booking.date}</td>
+                        <td className="py-3 text-sm font-medium">{booking.amount} {tc("sar")}</td>
+                        <td className="py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status] || ""}`}>
+                            {tb(booking.status as "pending" | "confirmed" | "cancelled" | "completed")}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
