@@ -63,8 +63,10 @@ export default async function ChaletPage({
   const slug = decodeURIComponent(rawSlug);
   setRequestLocale(locale);
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
+  const chalet = await prisma.chalet.findFirst({
+    where: {
+      OR: [{ slug }, { slug: rawSlug }],
+    },
     include: {
       reviews: {
         where: { isVisible: true },
