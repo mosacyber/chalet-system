@@ -10,7 +10,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
+  const slug = decodeURIComponent(rawSlug);
 
   const chalet = await prisma.chalet.findUnique({
     where: { slug },
@@ -58,7 +59,8 @@ export default async function ChaletPage({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
+  const slug = decodeURIComponent(rawSlug);
   setRequestLocale(locale);
 
   const chalet = await prisma.chalet.findUnique({
