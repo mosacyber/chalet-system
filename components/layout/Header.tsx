@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X, Globe, Home, Building, Info, Phone, User, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, Globe, Home, Building, Info, Phone, User, LayoutDashboard, LogOut, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -17,6 +18,7 @@ export default function Header() {
   const isLoggedIn = status === "authenticated";
   const role = (session?.user as { role?: string })?.role;
   const hasDashboard = role === "ADMIN" || role === "OWNER";
+  const { theme, setTheme } = useTheme();
 
   const navLinks = [
     { href: `/${locale}`, label: t("home"), icon: Home },
@@ -52,6 +54,15 @@ export default function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden items-center gap-3 md:flex">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="h-9 w-9"
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </Button>
           <LanguageSwitcher />
           {isLoggedIn ? (
             <>
@@ -180,8 +191,17 @@ export default function Header() {
                 )}
               </div>
 
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 flex items-center gap-3">
                 <LanguageSwitcher />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="h-9 w-9"
+                >
+                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                </Button>
               </div>
             </div>
           </SheetContent>
