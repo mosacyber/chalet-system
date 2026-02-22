@@ -18,6 +18,7 @@ interface DashboardStats {
   totalChalets: number;
   totalBookings: number;
   totalRevenue: number;
+  grossRevenue: number;
   revenueBreakdown: {
     cash: number;
     transfer: number;
@@ -82,7 +83,7 @@ export default function DashboardPage() {
       icon: CalendarDays,
     },
     {
-      label: t("totalRevenue"),
+      label: isAr ? "صافي الإيرادات" : "Net Revenue",
       value: `${(data?.totalRevenue ?? 0).toLocaleString()} ${tc("sar")}`,
       icon: DollarSign,
     },
@@ -119,18 +120,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Breakdown */}
-      {breakdown && (data?.totalRevenue ?? 0) > 0 && (
+      {breakdown && (data?.grossRevenue ?? 0) > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>{isAr ? "تفصيل الإيرادات" : "Revenue Breakdown"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Total */}
+              {/* Gross Revenue */}
               <div className="flex items-center justify-between rounded-lg bg-primary/5 p-3">
-                <span className="font-semibold">{isAr ? "الإجمالي" : "Total"}</span>
+                <span className="font-semibold">{isAr ? "إجمالي الإيرادات" : "Gross Revenue"}</span>
                 <span className="text-lg font-bold text-primary">
-                  {(data?.totalRevenue ?? 0).toLocaleString()} {tc("sar")}
+                  {(data?.grossRevenue ?? 0).toLocaleString()} {tc("sar")}
                 </span>
               </div>
 
@@ -183,21 +184,31 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Water */}
+                {/* Water - shown as deduction */}
                 {breakdown.water > 0 && (
-                  <div className="flex items-center gap-3 rounded-lg border p-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 dark:bg-cyan-950">
-                      <Droplets className="h-5 w-5 text-cyan-600" />
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950">
+                      <Droplets className="h-5 w-5 text-red-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{isAr ? "تعبئة موية" : "Water"}</span>
-                        <span className="font-bold">{breakdown.water.toLocaleString()} {tc("sar")}</span>
+                        <span className="text-sm font-medium">{isAr ? "وايت الماء (خصم)" : "Water (Deduction)"}</span>
+                        <span className="font-bold text-red-600">- {breakdown.water.toLocaleString()} {tc("sar")}</span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Net Revenue */}
+              {breakdown.water > 0 && (
+                <div className="flex items-center justify-between rounded-lg bg-green-50 p-3 dark:bg-green-950/30">
+                  <span className="font-semibold">{isAr ? "صافي الإيرادات" : "Net Revenue"}</span>
+                  <span className="text-lg font-bold text-green-600">
+                    {(data?.totalRevenue ?? 0).toLocaleString()} {tc("sar")}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

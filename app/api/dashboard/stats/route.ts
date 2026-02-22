@@ -86,10 +86,13 @@ export async function GET() {
     paymentLocations[s.key] = s.value;
   }
 
+  const netRevenue = totalRevenue - waterTotal;
+
   return NextResponse.json({
     totalChalets,
     totalBookings,
-    totalRevenue,
+    totalRevenue: netRevenue,
+    grossRevenue: totalRevenue,
     revenueBreakdown: {
       cash: breakdown.cash,
       transfer: breakdown.transfer,

@@ -56,6 +56,8 @@ export async function GET(
       paymentMethod: true,
       deposit: true,
       remainingAmount: true,
+      remainingPaymentMethod: true,
+      remainingCollected: true,
       createdAt: true,
     },
     orderBy: { checkIn: "asc" },
@@ -70,6 +72,8 @@ export async function GET(
     paymentMethod: b.paymentMethod || "",
     deposit: b.deposit ? Number(b.deposit) : 0,
     remainingAmount: b.remainingAmount ? Number(b.remainingAmount) : 0,
+    remainingPaymentMethod: b.remainingPaymentMethod || "",
+    remainingCollected: b.remainingCollected || false,
     createdAt: b.createdAt.toISOString(),
   }));
 
@@ -146,6 +150,51 @@ export async function POST(
   await prisma.booking.createMany({ data: bookings });
 
   return NextResponse.json({ message: "Dates blocked", created: newDates.length });
+}
+
+// PATCH - update remaining amount (mark as collected)
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+  const result = await getSessionAndChalet(slug);
+  if ("error" in result) return result.error;
+
+  const body = await request.json();
+  const { bookingId, remainingAmount, remainingPaymentMethod } = body;
+
+  if (!bookingId) {
+    return NextResponse.json({ error: "bookingId required" }, { status: 400 });
+  }
+
+  const booking = await prisma.booking.findFirst({
+    where: {
+      id: bookingId,
+      chaletId: result.chalet.id,
+      status: "BLOCKED",
+    },
+  });
+
+  if (!booking) {
+    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  const updated = await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      remainingAmount: remainingAmount ?? 0,
+      remainingPaymentMethod: remainingPaymentMethod || null,
+      remainingCollected: !!remainingPaymentMethod,
+    },
+  });
+
+  return NextResponse.json({
+    message: "Updated successfully",
+    remainingAmount: updated.remainingAmount ? Number(updated.remainingAmount) : 0,
+    remainingPaymentMethod: updated.remainingPaymentMethod || "",
+    remainingCollected: updated.remainingCollected,
+  });
 }
 
 // DELETE - unblock dates
