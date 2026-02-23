@@ -12,11 +12,12 @@ export default function LayoutWrapper({
 }) {
   const pathname = usePathname();
   const isDashboard = pathname.includes("/dashboard");
+  const isLinksPage = /^\/(ar|en)\/links\//.test(pathname);
   const lastTracked = useRef("");
 
   // Track public page visits
   useEffect(() => {
-    if (isDashboard || !pathname || pathname === lastTracked.current) return;
+    if (isDashboard || isLinksPage || !pathname || pathname === lastTracked.current) return;
     lastTracked.current = pathname;
 
     // Strip locale prefix for cleaner page names
@@ -26,9 +27,9 @@ export default function LayoutWrapper({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ page }),
     }).catch(() => {});
-  }, [pathname, isDashboard]);
+  }, [pathname, isDashboard, isLinksPage]);
 
-  if (isDashboard) {
+  if (isDashboard || isLinksPage) {
     return <main className="min-h-screen">{children}</main>;
   }
 
