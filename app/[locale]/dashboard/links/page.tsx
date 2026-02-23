@@ -47,6 +47,8 @@ import {
   Star,
   Minus,
   Image,
+  Building,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -129,6 +131,195 @@ function getIconComponent(iconType: string) {
     case "email": return Mail;
     default: return Link2;
   }
+}
+
+// === دوال المعاينة ===
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return { r: 16, g: 185, b: 129 };
+  return { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) };
+}
+
+function getPreviewBgCSS(style: string, rgb: { r: number; g: number; b: number }) {
+  const c = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+  switch (style) {
+    case "gradient":
+      return { background: `linear-gradient(135deg, rgba(${c}, 0.25) 0%, rgba(${c}, 0.08) 40%, #f8fafc 100%)` };
+    case "animated":
+      return { background: `linear-gradient(135deg, rgba(${c}, 0.2) 0%, rgba(${c}, 0.05) 50%, #f8fafc 100%)` };
+    case "particles":
+      return { background: `radial-gradient(circle at 20% 20%, rgba(${c}, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(${c}, 0.1) 0%, transparent 50%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)` };
+    default:
+      return { background: `linear-gradient(180deg, rgba(${c}, 0.08) 0%, #f8fafc 100%)` };
+  }
+}
+
+function getPreviewBtnClasses(style: string, rgb: { r: number; g: number; b: number }, isFeatured: boolean) {
+  const c = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+  const base = "flex items-center gap-2 w-full px-3 py-2.5 transition-all duration-300";
+  const featured = isFeatured ? "ring-1 ring-offset-1 py-3" : "";
+  switch (style) {
+    case "pill":
+      return { className: `${base} ${featured} rounded-full bg-white border border-gray-200`, style: { borderColor: `rgba(${c}, 0.2)` } };
+    case "sharp":
+      return { className: `${base} ${featured} rounded-none bg-white border border-gray-200`, style: { borderColor: `rgba(${c}, 0.2)` } };
+    case "outline":
+      return { className: `${base} ${featured} rounded-xl border-2`, style: { borderColor: `rgb(${c})`, backgroundColor: "transparent" } };
+    case "shadow":
+      return { className: `${base} ${featured} rounded-xl bg-white shadow-md border-0`, style: {} };
+    case "glass":
+      return { className: `${base} ${featured} rounded-xl border border-white/30 backdrop-blur-sm`, style: { backgroundColor: "rgba(255,255,255,0.6)" } };
+    default:
+      return { className: `${base} ${featured} rounded-xl bg-white border border-gray-200`, style: { borderColor: `rgba(${c}, 0.2)` } };
+  }
+}
+
+function getPreviewFontClass(font: string) {
+  switch (font) {
+    case "arabic": return "font-serif";
+    case "modern": return "font-mono";
+    default: return "font-sans";
+  }
+}
+
+// === مكون المعاينة الحية ===
+function LivePreview({
+  displayName, subtitle, bio, themeColor, backgroundStyle, buttonStyle, fontFamily, links, isAr,
+}: {
+  displayName: string; subtitle: string; bio: string; themeColor: string;
+  backgroundStyle: string; buttonStyle: string; fontFamily: string;
+  links: LinkItemData[]; isAr: boolean;
+}) {
+  const rgb = hexToRgb(themeColor);
+  const bgCSS = getPreviewBgCSS(backgroundStyle, rgb);
+  const fontClass = getPreviewFontClass(fontFamily);
+  const activeLinks = links.filter((l) => l.isActive);
+  const socialLinks = activeLinks.filter((l) => l.linkType === "social");
+  const regularAndHeaders = activeLinks.filter((l) => l.linkType !== "social");
+
+  return (
+    <div className="sticky top-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Smartphone className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium text-muted-foreground">{isAr ? "معاينة حية" : "Live Preview"}</span>
+      </div>
+      {/* Phone Frame */}
+      <div className="mx-auto w-[320px] rounded-[2.5rem] border-[6px] border-gray-800 bg-gray-800 shadow-2xl overflow-hidden">
+        {/* Notch */}
+        <div className="flex justify-center py-1.5 bg-gray-800">
+          <div className="h-4 w-20 rounded-full bg-gray-900" />
+        </div>
+        {/* Screen */}
+        <div
+          className={`h-[560px] overflow-y-auto overflow-x-hidden ${fontClass} ${backgroundStyle === "animated" ? "animate-preview-gradient" : ""}`}
+          style={bgCSS}
+          dir={isAr ? "rtl" : "ltr"}
+        >
+          {backgroundStyle === "animated" && (
+            <style>{`
+              @keyframes previewGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+              .animate-preview-gradient { background-size: 200% 200% !important; animation: previewGradientShift 8s ease infinite; }
+            `}</style>
+          )}
+
+          <div className="flex flex-col items-center px-4 py-8">
+            {/* Avatar */}
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-full text-white text-2xl font-bold mb-3 shadow-lg ring-2 ring-white/50"
+              style={{ backgroundColor: themeColor }}
+            >
+              {displayName ? displayName.charAt(0) : "?"}
+            </div>
+
+            {/* Name */}
+            <h2 className="text-base font-bold text-gray-900 text-center">
+              {displayName || (isAr ? "الاسم المعروض" : "Display Name")}
+            </h2>
+
+            {/* Subtitle */}
+            {subtitle && (
+              <p className="mt-0.5 text-[11px] font-medium text-center" style={{ color: themeColor }}>{subtitle}</p>
+            )}
+
+            {/* Bio */}
+            {bio && (
+              <p className="mt-1.5 max-w-[260px] text-center text-[11px] text-gray-600 leading-relaxed">{bio}</p>
+            )}
+
+            {/* Social Icons */}
+            {socialLinks.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2 mt-4">
+                {socialLinks.map((link, i) => {
+                  const IconComp = getIconComponent(link.iconType);
+                  return (
+                    <div
+                      key={`ps-${i}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      <IconComp className="h-4 w-4" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Links */}
+            <div className="w-full mt-5 space-y-2">
+              {regularAndHeaders.map((link, index) => {
+                if (link.linkType === "header") {
+                  return (
+                    <div key={`ph-${index}`} className="flex items-center gap-2 py-2">
+                      <div className="h-px flex-1" style={{ backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)` }} />
+                      <span className="text-[10px] font-semibold text-gray-500 whitespace-nowrap">{link.title}</span>
+                      <div className="h-px flex-1" style={{ backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)` }} />
+                    </div>
+                  );
+                }
+
+                const IconComp = getIconComponent(link.iconType);
+                const btnProps = getPreviewBtnClasses(buttonStyle, rgb, link.isFeatured);
+                return (
+                  <div key={`pl-${index}`} className={btnProps.className} style={btnProps.style}>
+                    {link.thumbnail ? (
+                      <img src={link.thumbnail} alt="" className="h-7 w-7 shrink-0 rounded-md object-cover" />
+                    ) : (
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white"
+                        style={{ backgroundColor: themeColor }}
+                      >
+                        <IconComp className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                    <span className={`flex-1 text-gray-800 ${link.isFeatured ? "text-xs font-semibold" : "text-[11px] font-medium"}`}>
+                      {link.title}
+                    </span>
+                    <svg className="h-3 w-3 text-gray-400 rtl:rotate-180 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Empty state */}
+            {activeLinks.length === 0 && (
+              <div className="mt-8 text-center text-gray-400">
+                <Link2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-[11px]">{isAr ? "لا توجد روابط بعد" : "No links yet"}</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-8 flex items-center gap-1.5 text-[9px] text-gray-400">
+              <Building className="h-2.5 w-2.5" />
+              <span>{isAr ? "مدعوم من شاليهات الراحة" : "Powered by Al-Raha Chalets"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LinksPage() {
@@ -343,6 +534,11 @@ export default function LinksPage() {
           </div>
         )}
       </div>
+
+      {/* Two-column layout: Editor + Preview */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6">
+        {/* === العمود الأيمن: التعديلات === */}
+        <div className="space-y-6">
 
       {/* === إعدادات الصفحة === */}
       <Card>
@@ -581,6 +777,24 @@ export default function LinksPage() {
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         {isAr ? "حفظ التغييرات" : "Save Changes"}
       </Button>
+
+        </div>{/* end editor column */}
+
+        {/* === العمود الأيسر: المعاينة الحية === */}
+        <div className="hidden xl:block">
+          <LivePreview
+            displayName={displayName}
+            subtitle={subtitle}
+            bio={bio}
+            themeColor={themeColor}
+            backgroundStyle={backgroundStyle}
+            buttonStyle={buttonStyle}
+            fontFamily={fontFamily}
+            links={links}
+            isAr={isAr}
+          />
+        </div>
+      </div>{/* end grid */}
 
       {/* === Dialog إضافة/تعديل رابط === */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
