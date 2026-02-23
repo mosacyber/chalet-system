@@ -41,6 +41,7 @@ model User {
   bookings      Booking[]
   reviews       Review[]
   notifications Notification[]
+  linkPage      LinkPage?      @relation("UserLinkPage")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -156,6 +157,36 @@ model WaterExpense {
   notes     String?
   date      DateTime @default(now())
   createdAt DateTime @default(now())
+}
+
+model LinkPage {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation("UserLinkPage", fields: [userId], references: [id])
+  slug        String     @unique
+  displayName String
+  bio         String?    @db.Text
+  avatarUrl   String?
+  themeColor  String     @default("#10b981")
+  isPublished Boolean    @default(false)
+  links       LinkItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model LinkItem {
+  id         String   @id @default(cuid())
+  linkPageId String
+  linkPage   LinkPage @relation(fields: [linkPageId], references: [id], onDelete: Cascade)
+  title      String
+  url        String
+  iconType   String   @default("link")
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([linkPageId])
 }
 
 model SiteSetting {
