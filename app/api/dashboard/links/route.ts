@@ -28,7 +28,6 @@ export async function GET() {
     return NextResponse.json(linkPage);
   } catch (error) {
     console.error("Links GET error:", error);
-    // Table may not exist yet - return null gracefully
     return NextResponse.json(null);
   }
 }
@@ -47,9 +46,19 @@ export async function POST(request: Request) {
 
     const userId = (session.user as { id: string }).id;
     const body = await request.json();
-    const { slug, displayName, bio, themeColor, isPublished, links } = body;
+    const {
+      slug,
+      displayName,
+      subtitle,
+      bio,
+      themeColor,
+      backgroundStyle,
+      buttonStyle,
+      fontFamily,
+      isPublished,
+      links,
+    } = body;
 
-    // Validate slug format (only lowercase letters, numbers, hyphens)
     if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: "Invalid slug format" },
@@ -57,7 +66,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check slug uniqueness (exclude current user's page)
     const existingPage = await prisma.linkPage.findUnique({
       where: { slug },
     });
@@ -68,34 +76,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use transaction to update page and links together
+    const pageData = {
+      slug,
+      displayName: displayName || "",
+      subtitle: subtitle || null,
+      bio: bio || null,
+      themeColor: themeColor || "#10b981",
+      backgroundStyle: backgroundStyle || "flat",
+      buttonStyle: buttonStyle || "rounded",
+      fontFamily: fontFamily || "default",
+      isPublished: isPublished ?? false,
+    };
+
     const result = await prisma.$transaction(async (tx) => {
-      // Upsert the link page
       const page = await tx.linkPage.upsert({
         where: { userId },
-        create: {
-          userId,
-          slug,
-          displayName: displayName || "",
-          bio: bio || null,
-          themeColor: themeColor || "#10b981",
-          isPublished: isPublished ?? false,
-        },
-        update: {
-          slug,
-          displayName: displayName || "",
-          bio: bio || null,
-          themeColor: themeColor || "#10b981",
-          isPublished: isPublished ?? false,
-        },
+        create: { userId, ...pageData },
+        update: pageData,
       });
 
-      // Delete existing links and recreate
       await tx.linkItem.deleteMany({
         where: { linkPageId: page.id },
       });
 
-      // Create new links
       if (links && Array.isArray(links) && links.length > 0) {
         await tx.linkItem.createMany({
           data: links.map(
@@ -104,22 +107,27 @@ export async function POST(request: Request) {
                 title: string;
                 url: string;
                 iconType?: string;
+                linkType?: string;
                 isActive?: boolean;
+                isFeatured?: boolean;
+                thumbnail?: string;
               },
               index: number
             ) => ({
               linkPageId: page.id,
               title: link.title,
-              url: link.url,
+              url: link.url || "",
               iconType: link.iconType || "link",
+              linkType: link.linkType || "link",
               sortOrder: index,
               isActive: link.isActive ?? true,
+              isFeatured: link.isFeatured ?? false,
+              thumbnail: link.thumbnail || null,
             })
           ),
         });
       }
 
-      // Return page with links
       return tx.linkPage.findUnique({
         where: { id: page.id },
         include: {

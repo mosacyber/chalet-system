@@ -115,7 +115,16 @@ export async function PUT(request: Request) {
   await run("Add LinkItem linkPageId index", `CREATE INDEX IF NOT EXISTS "LinkItem_linkPageId_idx" ON "LinkItem"("linkPageId")`);
   await run("Add LinkItem linkPageId FK", `ALTER TABLE "LinkItem" ADD CONSTRAINT "LinkItem_linkPageId_fkey" FOREIGN KEY ("linkPageId") REFERENCES "LinkPage"("id") ON DELETE CASCADE ON UPDATE CASCADE`);
 
-  return NextResponse.json({ message: "V2/V3/V4/V5/V6/V7 migration complete", results });
+  // V8: VIP features - new columns for LinkPage and LinkItem
+  await run("Add LinkPage subtitle", `ALTER TABLE "LinkPage" ADD COLUMN IF NOT EXISTS "subtitle" TEXT`);
+  await run("Add LinkPage backgroundStyle", `ALTER TABLE "LinkPage" ADD COLUMN IF NOT EXISTS "backgroundStyle" TEXT NOT NULL DEFAULT 'flat'`);
+  await run("Add LinkPage buttonStyle", `ALTER TABLE "LinkPage" ADD COLUMN IF NOT EXISTS "buttonStyle" TEXT NOT NULL DEFAULT 'rounded'`);
+  await run("Add LinkPage fontFamily", `ALTER TABLE "LinkPage" ADD COLUMN IF NOT EXISTS "fontFamily" TEXT NOT NULL DEFAULT 'default'`);
+  await run("Add LinkItem linkType", `ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "linkType" TEXT NOT NULL DEFAULT 'link'`);
+  await run("Add LinkItem isFeatured", `ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "isFeatured" BOOLEAN NOT NULL DEFAULT false`);
+  await run("Add LinkItem thumbnail", `ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "thumbnail" TEXT`);
+
+  return NextResponse.json({ message: "V2-V8 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)
