@@ -100,7 +100,12 @@ export async function PUT(request: Request) {
   await run("Add remainingPaymentMethod", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingPaymentMethod" TEXT`);
   await run("Add remainingCollected", `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "remainingCollected" BOOLEAN NOT NULL DEFAULT false`);
 
-  return NextResponse.json({ message: "V2/V3/V4/V5 migration complete", results });
+  // V6: Visit tracking table
+  await run("Create Visit table", `CREATE TABLE IF NOT EXISTS "Visit" ("id" TEXT NOT NULL, "page" TEXT NOT NULL, "referrer" TEXT, "userAgent" TEXT, "ip" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Visit_pkey" PRIMARY KEY ("id"))`);
+  await run("Add Visit createdAt index", `CREATE INDEX IF NOT EXISTS "Visit_createdAt_idx" ON "Visit"("createdAt")`);
+  await run("Add Visit page index", `CREATE INDEX IF NOT EXISTS "Visit_page_idx" ON "Visit"("page")`);
+
+  return NextResponse.json({ message: "V2/V3/V4/V5/V6 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)

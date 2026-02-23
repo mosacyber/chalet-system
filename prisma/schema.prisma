@@ -163,3 +163,15 @@ model SiteSetting {
   key   String @unique
   value String @db.Text
 }
+
+model Visit {
+  id        String   @id @default(cuid())
+  page      String
+  referrer  String?
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([page])
+}

@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Droplets,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -46,6 +47,7 @@ export default function DashboardShell({
     { href: `/${locale}/dashboard/bookings`, label: t("manageBookings"), icon: CalendarDays },
     { href: `/${locale}/dashboard/customers`, label: t("manageCustomers"), icon: Users },
     { href: `/${locale}/dashboard/reviews`, label: t("manageReviews"), icon: Star },
+    { href: `/${locale}/dashboard/visits`, label: isAr ? "الزيارات" : "Visits", icon: Eye },
     { href: `/${locale}/dashboard/reports`, label: t("reports"), icon: BarChart3 },
     { href: `/${locale}/dashboard/notifications`, label: t("notifications"), icon: Bell },
     { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
