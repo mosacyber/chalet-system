@@ -105,7 +105,17 @@ export async function PUT(request: Request) {
   await run("Add Visit createdAt index", `CREATE INDEX IF NOT EXISTS "Visit_createdAt_idx" ON "Visit"("createdAt")`);
   await run("Add Visit page index", `CREATE INDEX IF NOT EXISTS "Visit_page_idx" ON "Visit"("page")`);
 
-  return NextResponse.json({ message: "V2/V3/V4/V5/V6 migration complete", results });
+  // V7: LinkPage and LinkItem tables
+  await run("Create LinkPage table", `CREATE TABLE IF NOT EXISTS "LinkPage" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "slug" TEXT NOT NULL, "displayName" TEXT NOT NULL, "bio" TEXT, "avatarUrl" TEXT, "themeColor" TEXT NOT NULL DEFAULT '#10b981', "isPublished" BOOLEAN NOT NULL DEFAULT false, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "LinkPage_pkey" PRIMARY KEY ("id"))`);
+  await run("Add LinkPage userId unique", `CREATE UNIQUE INDEX IF NOT EXISTS "LinkPage_userId_key" ON "LinkPage"("userId")`);
+  await run("Add LinkPage slug unique", `CREATE UNIQUE INDEX IF NOT EXISTS "LinkPage_slug_key" ON "LinkPage"("slug")`);
+  await run("Add LinkPage userId FK", `ALTER TABLE "LinkPage" ADD CONSTRAINT "LinkPage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
+
+  await run("Create LinkItem table", `CREATE TABLE IF NOT EXISTS "LinkItem" ("id" TEXT NOT NULL, "linkPageId" TEXT NOT NULL, "title" TEXT NOT NULL, "url" TEXT NOT NULL, "iconType" TEXT NOT NULL DEFAULT 'link', "sortOrder" INTEGER NOT NULL DEFAULT 0, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "LinkItem_pkey" PRIMARY KEY ("id"))`);
+  await run("Add LinkItem linkPageId index", `CREATE INDEX IF NOT EXISTS "LinkItem_linkPageId_idx" ON "LinkItem"("linkPageId")`);
+  await run("Add LinkItem linkPageId FK", `ALTER TABLE "LinkItem" ADD CONSTRAINT "LinkItem_linkPageId_fkey" FOREIGN KEY ("linkPageId") REFERENCES "LinkPage"("id") ON DELETE CASCADE ON UPDATE CASCADE`);
+
+  return NextResponse.json({ message: "V2/V3/V4/V5/V6/V7 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)
