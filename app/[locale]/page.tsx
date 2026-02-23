@@ -5,6 +5,7 @@ import FeaturedChalets from "@/components/home/FeaturedChalets";
 import WhyUs from "@/components/home/WhyUs";
 import Amenities from "@/components/home/Amenities";
 import Testimonials from "@/components/home/Testimonials";
+import CTASection from "@/components/home/CTASection";
 import JsonLd from "@/components/seo/JsonLd";
 
 export async function generateMetadata({
@@ -17,18 +18,18 @@ export async function generateMetadata({
 
   return {
     title: isAr
-      ? "شاليهات الراحة - أفضل الشاليهات والاستراحات"
-      : "Al-Raha Chalets - Best Chalets & Resorts",
+      ? "نظام إدارة الشاليهات والاستراحات - منصة متكاملة"
+      : "Chalet & Resort Management System - Complete Platform",
     description: isAr
-      ? "اكتشف أفضل الشاليهات والاستراحات - احجز الآن واستمتع بأجمل الأوقات مع العائلة والأصدقاء. حجز سهل وسريع بأفضل الأسعار."
-      : "Discover the best chalets and resorts - Book now and enjoy the best times with family and friends. Easy and fast booking at the best prices.",
+      ? "نظام إدارة شاليهات واستراحات متكامل - إدارة الحجوزات والتقويم الهجري والمالية والعملاء والتقارير. ابدأ مجاناً الآن."
+      : "Complete chalet and resort management system - manage bookings, Hijri calendar, finances, customers, and reports. Start free now.",
     openGraph: {
       title: isAr
-        ? "شاليهات الراحة - أفضل الشاليهات والاستراحات"
-        : "Al-Raha Chalets - Best Chalets & Resorts",
+        ? "نظام إدارة الشاليهات والاستراحات"
+        : "Chalet & Resort Management System",
       description: isAr
-        ? "احجز الآن واستمتع بأجمل الأوقات مع العائلة والأصدقاء"
-        : "Book now and enjoy the best times with family and friends",
+        ? "منصة متكاملة لإدارة الحجوزات والتقويم والمالية وبيانات العملاء"
+        : "A complete platform for managing bookings, calendar, finances, and customer data",
     },
     alternates: {
       languages: {
@@ -47,28 +48,37 @@ export default async function HomePage({
   const { locale } = await params;
   setRequestLocale(locale);
 
+  const isAr = locale === "ar";
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "LodgingBusiness",
-    name: locale === "ar" ? "شاليهات الراحة" : "Al-Raha Chalets",
-    description:
-      locale === "ar"
-        ? "أفضل الشاليهات والاستراحات - احجز الآن واستمتع بأجمل الأوقات"
-        : "Best Chalets & Resorts - Book now and enjoy the best times",
+    "@type": "SoftwareApplication",
+    name: isAr ? "نظام إدارة الشاليهات والاستراحات" : "Chalet & Resort Management System",
+    description: isAr
+      ? "منصة متكاملة لإدارة الشاليهات والاستراحات - حجوزات، تقويم هجري، مالية، عملاء، تقارير"
+      : "Complete chalet & resort management platform - bookings, Hijri calendar, finances, customers, reports",
     url: process.env.NEXT_PUBLIC_APP_URL,
-    currenciesAccepted: "SAR",
-    paymentAccepted: "Cash, Credit Card, Mada",
-    priceRange: "$$",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "SAR",
+    },
+    featureList: isAr
+      ? "إدارة الحجوزات, تقويم هجري, تتبع مالي, طباعة فواتير, إدارة عملاء, تقارير, ثنائي اللغة"
+      : "Booking management, Hijri calendar, Financial tracking, Invoice printing, Customer management, Reports, Bilingual",
   };
 
   return (
     <>
       <JsonLd data={jsonLd} />
       <HeroSection />
-      <FeaturedChalets />
       <WhyUs />
+      <FeaturedChalets />
       <Amenities />
       <Testimonials />
+      <CTASection />
     </>
   );
 }
