@@ -5,21 +5,25 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await params;
+  try {
+    const { slug } = await params;
 
-  const linkPage = await prisma.linkPage.findUnique({
-    where: { slug, isPublished: true },
-    include: {
-      links: {
-        where: { isActive: true },
-        orderBy: { sortOrder: "asc" },
+    const linkPage = await prisma.linkPage.findUnique({
+      where: { slug, isPublished: true },
+      include: {
+        links: {
+          where: { isActive: true },
+          orderBy: { sortOrder: "asc" },
+        },
       },
-    },
-  });
+    });
 
-  if (!linkPage) {
+    if (!linkPage) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(linkPage);
+  } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  return NextResponse.json(linkPage);
 }
