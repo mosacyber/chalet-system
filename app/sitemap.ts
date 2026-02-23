@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
+import { prisma } from "@/lib/prisma";
 
-const CHALET_SLUGS = ["royal-chalet", "garden-resort", "sea-view-chalet"];
-
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://chalet-system-pxz3v1.cranl.net";
 
@@ -30,16 +29,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  // Individual chalets
-  for (const locale of locales) {
-    for (const slug of CHALET_SLUGS) {
-      entries.push({
-        url: `${siteUrl}/${locale}/chalets/${slug}`,
-        lastModified: new Date(),
-        changeFrequency: "weekly",
-        priority: 0.8,
-      });
+  // Dynamic chalets from database
+  try {
+    const chalets = await prisma.chalet.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true },
+    });
+
+    for (const locale of locales) {
+      for (const chalet of chalets) {
+        entries.push({
+          url: `${siteUrl}/${locale}/chalets/${chalet.slug}`,
+          lastModified: chalet.updatedAt,
+          changeFrequency: "weekly",
+          priority: 0.8,
+        });
+      }
     }
+  } catch {
+    // If DB is not available, skip dynamic chalets
   }
 
   // About

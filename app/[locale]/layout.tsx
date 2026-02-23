@@ -86,6 +86,9 @@ export async function generateMetadata({
         en: "/en",
       },
     },
+    verification: {
+      google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    },
   };
 }
 
