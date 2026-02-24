@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const BUILD_VERSION = "v2-baileys";
+
 // Ensure WhatsAppSession table exists (runs once)
 let tableEnsured = false;
 async function ensureTable() {

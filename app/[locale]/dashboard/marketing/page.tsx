@@ -54,16 +54,20 @@ export default function MarketingPage() {
   // جلب البيانات
   useEffect(() => {
     fetch("/api/dashboard/marketing")
-      .then((res) => res.json())
-      .then((data: WhatsAppData | null) => {
-        if (data) {
+      .then(async (res) => {
+        const data = await res.json();
+        if (data && !data.error) {
           setPhone(data.phone || "");
           setPhoneSaved(!!data.phone);
           setStatus(data.status || "disconnected");
           setLastConnected(data.lastConnectedAt || null);
+        } else if (data?.error) {
+          setError(`API: ${data.error}`);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        setError(`Load: ${err.message}`);
+      })
       .finally(() => setLoading(false));
   }, []);
 
