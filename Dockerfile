@@ -34,11 +34,22 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 RUN mkdir -p /app/public/uploads && chown nextjs:nodejs /app/public/uploads
+RUN mkdir -p /app/data/whatsapp-sessions && chown nextjs:nodejs /app/data/whatsapp-sessions
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/messages ./messages
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/@whiskeysockets ./node_modules/@whiskeysockets
+COPY --from=builder /app/node_modules/libsignal ./node_modules/libsignal
+COPY --from=builder /app/node_modules/qrcode ./node_modules/qrcode
+COPY --from=builder /app/node_modules/pino ./node_modules/pino
+COPY --from=builder /app/node_modules/protobufjs ./node_modules/protobufjs
+COPY --from=builder /app/node_modules/@hapi ./node_modules/@hapi
+COPY --from=builder /app/node_modules/async-mutex ./node_modules/async-mutex
+COPY --from=builder /app/node_modules/music-metadata ./node_modules/music-metadata
+COPY --from=builder /app/node_modules/p-queue ./node_modules/p-queue
+COPY --from=builder /app/node_modules/@cacheable ./node_modules/@cacheable
 COPY --from=builder /app/prisma ./prisma
 
 USER nextjs

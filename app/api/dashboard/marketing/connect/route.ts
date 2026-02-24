@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const OPENCLAW_API_URL = process.env.OPENCLAW_API_URL || "http://localhost:8080";
-const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY || "";
-
-async function openClawFetch(path: string, options: RequestInit = {}) {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(OPENCLAW_API_KEY ? { Authorization: `Bearer ${OPENCLAW_API_KEY}` } : {}),
-  };
-
-  const res = await fetch(`${OPENCLAW_API_URL}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options.headers as Record<string, string>) },
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "Unknown error");
-    throw new Error(`OpenClaw API error ${res.status}: ${text}`);
-  }
-
-  return res.json();
-}
+import {
+  startWhatsAppSession,
+  getSessionInfo,
+  disconnectWhatsApp,
+} from "@/lib/whatsapp-manager";
 
 // POST: بدء الاتصال وجلب QR Code
 export async function POST() {
@@ -44,32 +27,30 @@ export async function POST() {
     });
 
     if (!whatsapp) {
-      return NextResponse.json({ error: "Save phone number first" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Save phone number first" },
+        { status: 400 }
+      );
     }
 
-    // إنشاء instance في OpenClaw
-    let instanceId = whatsapp.instanceId;
+    // Start Baileys session and get QR code
+    const qrCode = await startWhatsAppSession(userId);
 
-    if (!instanceId) {
-      const createRes = await openClawFetch("/instance/create", {
-        method: "POST",
-        body: JSON.stringify({
-          instanceName: `chalet-${userId}`,
-          number: whatsapp.phone.replace(/[^0-9+]/g, ""),
-        }),
-      });
-      instanceId = createRes.instance?.instanceId || createRes.instanceId || createRes.id;
-
-      await prisma.whatsAppSession.update({
-        where: { userId },
-        data: { instanceId, status: "qr_pending" },
-      });
+    if (!qrCode) {
+      // Check if already connected (no QR needed)
+      const info = getSessionInfo(userId);
+      if (info.status === "connected") {
+        await prisma.whatsAppSession.update({
+          where: { userId },
+          data: { status: "connected", lastConnectedAt: new Date() },
+        });
+        return NextResponse.json({ status: "connected", qrCode: null });
+      }
+      return NextResponse.json(
+        { error: "Failed to generate QR code. Try again." },
+        { status: 500 }
+      );
     }
-
-    // جلب QR Code
-    const qrRes = await openClawFetch(`/instance/qr/${instanceId}`, {
-      method: "GET",
-    });
 
     await prisma.whatsAppSession.update({
       where: { userId },
@@ -77,14 +58,16 @@ export async function POST() {
     });
 
     return NextResponse.json({
-      qrCode: qrRes.qrcode || qrRes.qr || qrRes.base64 || qrRes.code || null,
-      instanceId,
+      qrCode,
       status: "qr_pending",
     });
   } catch (error) {
     console.error("Marketing connect error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to connect to OpenClaw" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to start WhatsApp",
+      },
       { status: 500 }
     );
   }
@@ -105,46 +88,30 @@ export async function GET() {
 
     const userId = (session.user as { id: string }).id;
 
+    // Get real-time status from Baileys session
+    const info = getSessionInfo(userId);
+
+    // Update DB if status changed
     const whatsapp = await prisma.whatsAppSession.findUnique({
       where: { userId },
     });
 
-    if (!whatsapp?.instanceId) {
-      return NextResponse.json({ status: "disconnected" });
-    }
-
-    try {
-      const statusRes = await openClawFetch(`/instance/status/${whatsapp.instanceId}`, {
-        method: "GET",
-      });
-
-      const isConnected =
-        statusRes.status === "open" ||
-        statusRes.status === "connected" ||
-        statusRes.connected === true;
-
-      const newStatus = isConnected ? "connected" : whatsapp.status;
-
-      if (newStatus !== whatsapp.status) {
-        await prisma.whatsAppSession.update({
-          where: { userId },
-          data: {
-            status: newStatus,
-            ...(isConnected ? { lastConnectedAt: new Date() } : {}),
-          },
-        });
-      }
-
-      return NextResponse.json({
-        status: newStatus,
-        instanceId: whatsapp.instanceId,
-      });
-    } catch {
-      return NextResponse.json({
-        status: whatsapp.status,
-        instanceId: whatsapp.instanceId,
+    if (whatsapp && whatsapp.status !== info.status) {
+      await prisma.whatsAppSession.update({
+        where: { userId },
+        data: {
+          status: info.status,
+          ...(info.status === "connected"
+            ? { lastConnectedAt: new Date() }
+            : {}),
+        },
       });
     }
+
+    return NextResponse.json({
+      status: info.status,
+      qrCode: info.qrCode,
+    });
   } catch (error) {
     console.error("Marketing status error:", error);
     return NextResponse.json({ status: "disconnected" });
@@ -166,20 +133,10 @@ export async function DELETE() {
 
     const userId = (session.user as { id: string }).id;
 
-    const whatsapp = await prisma.whatsAppSession.findUnique({
-      where: { userId },
-    });
+    // Disconnect Baileys session
+    await disconnectWhatsApp(userId);
 
-    if (whatsapp?.instanceId) {
-      try {
-        await openClawFetch(`/instance/logout/${whatsapp.instanceId}`, {
-          method: "DELETE",
-        });
-      } catch {
-        // Ignore - instance may already be deleted
-      }
-    }
-
+    // Update DB
     await prisma.whatsAppSession.update({
       where: { userId },
       data: {
@@ -191,6 +148,9 @@ export async function DELETE() {
     return NextResponse.json({ status: "disconnected" });
   } catch (error) {
     console.error("Marketing disconnect error:", error);
-    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to disconnect" },
+      { status: 500 }
+    );
   }
 }
