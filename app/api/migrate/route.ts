@@ -124,7 +124,12 @@ export async function PUT(request: Request) {
   await run("Add LinkItem isFeatured", `ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "isFeatured" BOOLEAN NOT NULL DEFAULT false`);
   await run("Add LinkItem thumbnail", `ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "thumbnail" TEXT`);
 
-  return NextResponse.json({ message: "V2-V8 migration complete", results });
+  // V9: WhatsAppSession table
+  await run("Create WhatsAppSession table", `CREATE TABLE IF NOT EXISTS "WhatsAppSession" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "phone" TEXT NOT NULL, "instanceId" TEXT, "status" TEXT NOT NULL DEFAULT 'disconnected', "lastConnectedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "WhatsAppSession_pkey" PRIMARY KEY ("id"))`);
+  await run("Create WhatsAppSession userId index", `CREATE UNIQUE INDEX IF NOT EXISTS "WhatsAppSession_userId_key" ON "WhatsAppSession"("userId")`);
+  await run("Add WhatsAppSession FK", `ALTER TABLE "WhatsAppSession" ADD CONSTRAINT "WhatsAppSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
+
+  return NextResponse.json({ message: "V2-V9 migration complete", results });
 }
 
 // PATCH: Seed admin account (one-time use)

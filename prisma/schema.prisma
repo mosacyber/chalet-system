@@ -42,6 +42,7 @@ model User {
   reviews       Review[]
   notifications Notification[]
   linkPage      LinkPage?      @relation("UserLinkPage")
+  whatsapp      WhatsAppSession? @relation("UserWhatsApp")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -194,6 +195,18 @@ model LinkItem {
   updatedAt  DateTime @updatedAt
 
   @@index([linkPageId])
+}
+
+model WhatsAppSession {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation("UserWhatsApp", fields: [userId], references: [id])
+  phone           String
+  instanceId      String?
+  status          String    @default("disconnected")
+  lastConnectedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model SiteSetting {

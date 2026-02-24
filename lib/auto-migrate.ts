@@ -34,6 +34,11 @@ export async function autoMigrate(prisma: PrismaClient) {
     await run(`ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "isFeatured" BOOLEAN NOT NULL DEFAULT false`);
     await run(`ALTER TABLE "LinkItem" ADD COLUMN IF NOT EXISTS "thumbnail" TEXT`);
 
+    // V9: WhatsAppSession table
+    await run(`CREATE TABLE IF NOT EXISTS "WhatsAppSession" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "phone" TEXT NOT NULL, "instanceId" TEXT, "status" TEXT NOT NULL DEFAULT 'disconnected', "lastConnectedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "WhatsAppSession_pkey" PRIMARY KEY ("id"))`);
+    await run(`CREATE UNIQUE INDEX IF NOT EXISTS "WhatsAppSession_userId_key" ON "WhatsAppSession"("userId")`);
+    await run(`ALTER TABLE "WhatsAppSession" ADD CONSTRAINT "WhatsAppSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
+
     console.log("[auto-migrate] Migration check complete");
   } catch {
     // Silent fail - don't break the app
