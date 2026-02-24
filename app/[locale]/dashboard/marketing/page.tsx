@@ -116,10 +116,11 @@ export default function MarketingPage() {
         setPhoneSaved(true);
         toast.success(t("marketingPhoneSaved"));
       } else {
-        toast.error(isAr ? "حدث خطأ" : "An error occurred");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || (isAr ? "حدث خطأ" : "An error occurred"));
       }
-    } catch {
-      toast.error(isAr ? "حدث خطأ" : "An error occurred");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : (isAr ? "حدث خطأ في الاتصال" : "Connection error"));
     } finally {
       setSaving(false);
     }
