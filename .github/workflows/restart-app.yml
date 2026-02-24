@@ -1,0 +1,36 @@
+name: Restart CranL Application
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restart application
+        run: |
+          echo "Attempting restart..."
+          curl -s -X POST \
+            "https://app.cranl.com/api/applications/${{ secrets.CRANL_APP_ID }}/restart" \
+            -H "Authorization: Bearer ${{ secrets.CRANL_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -w "\nHTTP Status: %{http_code}\n" || true
+
+      - name: Try redeploy
+        run: |
+          echo "Attempting redeploy..."
+          curl -s -X POST \
+            "https://app.cranl.com/api/applications/${{ secrets.CRANL_APP_ID }}/deploy" \
+            -H "Authorization: Bearer ${{ secrets.CRANL_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -w "\nHTTP Status: %{http_code}\n" || true
+
+      - name: Wait for recovery
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          echo "Checking site..."
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" \
+            "https://chalet-system-pxz3v1.cranl.net/api/chalets"
+          curl -s "https://chalet-system-pxz3v1.cranl.net/api/chalets" | head -c 200
