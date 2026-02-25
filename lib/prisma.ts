@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { autoMigrate } from "./auto-migrate";
+import "./log-store";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

@@ -19,6 +19,7 @@ import {
   Eye,
   Link2,
   Megaphone,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -54,6 +55,7 @@ export default function DashboardShell({
     { href: `/${locale}/dashboard/visits`, label: isAr ? "الزيارات" : "Visits", icon: Eye },
     { href: `/${locale}/dashboard/reports`, label: t("reports"), icon: BarChart3 },
     { href: `/${locale}/dashboard/notifications`, label: t("notifications"), icon: Bell },
+    { href: `/${locale}/dashboard/logs`, label: isAr ? "سجل النظام" : "System Logs", icon: ScrollText },
     { href: `/${locale}/dashboard/settings`, label: t("settings"), icon: Settings },
   ];
 
