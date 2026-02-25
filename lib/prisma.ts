@@ -21,7 +21,9 @@ async function retryConnect(client: PrismaClient, maxRetries = 5) {
     try {
       await client.$connect();
       console.log(`[prisma] connected on attempt ${i + 1}`);
-      await autoMigrate(client).catch(() => {});
+      await autoMigrate(client).catch((e) =>
+        console.error("[prisma] auto-migrate error:", e)
+      );
       return;
     } catch (err) {
       console.warn(
