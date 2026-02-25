@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { hash } from "bcryptjs";
 
 let migrated = false;
 
@@ -196,8 +197,26 @@ export async function autoMigrate(prisma: PrismaClient) {
     await run(`CREATE UNIQUE INDEX IF NOT EXISTS "WhatsAppSession_userId_key" ON "WhatsAppSession"("userId")`);
     await run(`ALTER TABLE "WhatsAppSession" ADD CONSTRAINT "WhatsAppSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`);
 
+    // ── Seed: Default admin account ──
+    const adminExists = await prisma.user.findUnique({
+      where: { email: "admin@chalets.com" },
+    });
+    if (!adminExists) {
+      const hashedPassword = await hash("Admin@123", 12);
+      await prisma.user.create({
+        data: {
+          id: "admin-default-001",
+          name: "مدير النظام",
+          email: "admin@chalets.com",
+          password: hashedPassword,
+          role: "ADMIN",
+        },
+      });
+      console.log("[auto-migrate] Default admin account created");
+    }
+
     console.log("[auto-migrate] Migration check complete");
-  } catch {
-    // Silent fail - don't break the app
+  } catch (err) {
+    console.error("[auto-migrate] Error:", err);
   }
 }
