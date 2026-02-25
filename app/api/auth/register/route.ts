@@ -76,9 +76,10 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Registration error:", msg, error);
     return NextResponse.json(
-      { error: "حدث خطأ في إنشاء الحساب" },
+      { error: "حدث خطأ في إنشاء الحساب", detail: msg },
       { status: 500 }
     );
   }
