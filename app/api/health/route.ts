@@ -18,6 +18,10 @@ export async function GET(request: Request) {
     const result = await prisma.$queryRaw`SELECT 1 as ok`;
     status.database = "ok";
     status.dbResult = result;
+
+    // Check user count
+    const userCount = await prisma.user.count();
+    status.userCount = userCount;
   } catch (err) {
     status.database = "error";
     status.dbError = err instanceof Error ? err.message : String(err);

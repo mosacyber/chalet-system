@@ -15,14 +15,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
+            console.error("[auth] Missing email or password");
             return null;
           }
 
+          const email = (credentials.email as string).toLowerCase().trim();
+
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string },
+            where: { email },
           });
 
           if (!user) {
+            console.error("[auth] User not found:", email);
             return null;
           }
 
@@ -32,6 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!isPasswordValid) {
+            console.error("[auth] Invalid password for:", email);
             return null;
           }
 
@@ -43,7 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: user.image,
           };
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("[auth] Database/auth error:", error);
           return null;
         }
       },
