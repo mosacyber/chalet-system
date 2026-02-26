@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -13,18 +13,33 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const customers = await prisma.user.findMany({
-    where: { role: { not: "ADMIN" } },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      createdAt: true,
-      _count: { select: { bookings: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const users = await db.users.findMany((u) => u.role !== "ADMIN");
+
+  // Get all bookings to count per user
+  const allBookings = await db.bookings.findMany();
+
+  // Build booking count map
+  const bookingCountMap: Record<string, number> = {};
+  for (const b of allBookings) {
+    if (b.userId) {
+      bookingCountMap[b.userId] = (bookingCountMap[b.userId] || 0) + 1;
+    }
+  }
+
+  // Sort by createdAt desc
+  const sorted = users.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const customers = sorted.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    createdAt: u.createdAt,
+    _count: { bookings: bookingCountMap[u.id] || 0 },
+  }));
 
   return NextResponse.json(customers);
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET(
   request: Request,
@@ -10,21 +10,24 @@ export async function GET(
   const url = new URL(request.url);
   const dashboardMode = url.searchParams.get("dashboard") === "true";
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
-    include: {
-      reviews: {
-        where: { isVisible: true },
-        include: { user: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
-      },
-      _count: { select: { reviews: true } },
-    },
-  });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
 
   if (!chalet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  // Get reviews with user names
+  const reviews = await db.reviews.findMany(
+    (r) => r.chaletId === chalet.id && r.isVisible
+  );
+  const reviewsWithUsers = await Promise.all(
+    reviews
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map(async (r) => {
+        const user = await db.users.findUnique(r.userId);
+        return { ...r, user: user ? { name: user.name } : { name: "" } };
+      })
+  );
 
   if (dashboardMode) {
     const session = await auth();
@@ -32,8 +35,8 @@ export async function GET(
     if (role === "ADMIN" || (role === "OWNER" && chalet.ownerId === session?.user?.id)) {
       return NextResponse.json({
         ...chalet,
-        pricePerNight: Number(chalet.pricePerNight),
-        weekendPrice: chalet.weekendPrice ? Number(chalet.weekendPrice) : null,
+        reviews: reviewsWithUsers,
+        _count: { reviews: reviews.length },
       });
     }
   }
@@ -43,17 +46,16 @@ export async function GET(
   }
 
   const avgRating =
-    chalet.reviews.length > 0
-      ? chalet.reviews.reduce((sum, r) => sum + r.rating, 0) /
-        chalet.reviews.length
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
 
   return NextResponse.json({
     ...chalet,
-    pricePerNight: Number(chalet.pricePerNight),
-    weekendPrice: chalet.weekendPrice ? Number(chalet.weekendPrice) : null,
+    reviews: reviewsWithUsers,
+    _count: { reviews: reviews.length },
     rating: Math.round(avgRating * 10) / 10,
-    reviewCount: chalet._count.reviews,
+    reviewCount: reviews.length,
   });
 }
 
@@ -74,12 +76,12 @@ export async function PATCH(
   const { slug } = await params;
   const body = await request.json();
 
-  const chalet = await prisma.chalet.findUnique({ where: { slug } });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
   if (!chalet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (role === "OWNER" && chalet.ownerId !== session.user.id) {
+  if (role === "OWNER" && chalet.ownerId !== session.user!.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -100,10 +102,7 @@ export async function PATCH(
   if (body.amenities !== undefined) updateData.amenities = body.amenities;
   if (typeof body.isActive === "boolean") updateData.isActive = body.isActive;
 
-  const updated = await prisma.chalet.update({
-    where: { slug },
-    data: updateData,
-  });
+  const updated = await db.chalets.update(chalet.id, updateData);
 
   return NextResponse.json({ message: "Updated", data: updated });
 }
@@ -124,16 +123,16 @@ export async function DELETE(
 
   const { slug } = await params;
 
-  const chalet = await prisma.chalet.findUnique({ where: { slug } });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
   if (!chalet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (role === "OWNER" && chalet.ownerId !== session.user.id) {
+  if (role === "OWNER" && chalet.ownerId !== session.user!.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await prisma.chalet.delete({ where: { slug } });
+  await db.chalets.delete(chalet.id);
 
   return NextResponse.json({ message: "Deleted" });
 }

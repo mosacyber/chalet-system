@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -15,21 +15,29 @@ export async function GET() {
 
   const userId = (session.user as { id?: string }).id;
 
-  const statusFilter = { in: ["CONFIRMED", "COMPLETED"] as ("CONFIRMED" | "COMPLETED")[] };
+  let bookings;
 
-  const bookingFilter =
-    role === "ADMIN"
-      ? { status: statusFilter }
-      : { status: statusFilter, chalet: { ownerId: userId } };
+  if (role === "ADMIN") {
+    bookings = await db.bookings.findMany(
+      (b) => b.status === "CONFIRMED" || b.status === "COMPLETED"
+    );
+  } else {
+    // OWNER: first get their chalets, then filter bookings
+    const ownerChalets = await db.chalets.findMany(
+      (c) => c.ownerId === userId
+    );
+    const chaletIds = new Set(ownerChalets.map((c) => c.id));
+    bookings = await db.bookings.findMany(
+      (b) =>
+        (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
+        chaletIds.has(b.chaletId)
+    );
+  }
 
-  const bookings = await prisma.booking.findMany({
-    where: bookingFilter,
-    select: {
-      totalPrice: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  // Sort by createdAt ascending
+  bookings.sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
 
   const monthNames = {
     ar: [

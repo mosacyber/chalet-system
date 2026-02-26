@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -25,29 +25,35 @@ export async function GET() {
     const monthStart = new Date(todayStart);
     monthStart.setDate(monthStart.getDate() - 30);
 
+    const todayISO = todayStart.toISOString();
+    const weekISO = weekStart.toISOString();
+    const monthISO = monthStart.toISOString();
+
     // Counts: today, week, month, total
     const [todayCount, weekCount, monthCount, totalCount] = await Promise.all([
-      prisma.visit.count({ where: { createdAt: { gte: todayStart } } }),
-      prisma.visit.count({ where: { createdAt: { gte: weekStart } } }),
-      prisma.visit.count({ where: { createdAt: { gte: monthStart } } }),
-      prisma.visit.count(),
+      db.visits.count((v) => v.createdAt >= todayISO),
+      db.visits.count((v) => v.createdAt >= weekISO),
+      db.visits.count((v) => v.createdAt >= monthISO),
+      db.visits.count(),
     ]);
 
-    // Top pages (last 30 days)
-    const topPages = await prisma.visit.groupBy({
-      by: ["page"],
-      where: { createdAt: { gte: monthStart } },
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-      take: 10,
-    });
+    // Get all visits from last 30 days for top pages, device breakdown, and daily visits
+    const recentVisits = await db.visits.findMany(
+      (v) => v.createdAt >= monthISO
+    );
+
+    // Top pages (last 30 days) - manual groupBy
+    const pageCountMap: Record<string, number> = {};
+    for (const v of recentVisits) {
+      const page = v.page || "";
+      pageCountMap[page] = (pageCountMap[page] || 0) + 1;
+    }
+    const topPages = Object.entries(pageCountMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([page, count]) => ({ page, count }));
 
     // Device breakdown (last 30 days)
-    const recentVisits = await prisma.visit.findMany({
-      where: { createdAt: { gte: monthStart } },
-      select: { userAgent: true },
-    });
-
     let mobile = 0;
     let desktop = 0;
     let tablet = 0;
@@ -62,31 +68,29 @@ export async function GET() {
       }
     }
 
-    // Daily visits (last 30 days)
+    // Daily visits (last 30 days) - manual grouping
     const thirtyDaysAgo = new Date(todayStart);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    const thirtyDaysISO = thirtyDaysAgo.toISOString();
 
-    const dailyRaw = await prisma.$queryRawUnsafe<
-      { day: string; count: bigint }[]
-    >(
-      `SELECT DATE("createdAt") as day, COUNT(*)::bigint as count FROM "Visit" WHERE "createdAt" >= $1 GROUP BY DATE("createdAt") ORDER BY day ASC`,
-      thirtyDaysAgo
+    const allVisits = await db.visits.findMany(
+      (v) => v.createdAt >= thirtyDaysISO
     );
-
-    const daily = dailyRaw.map((d) => ({
-      day: String(d.day).split("T")[0],
-      count: Number(d.count),
-    }));
+    const dailyMap: Record<string, number> = {};
+    for (const v of allVisits) {
+      const day = v.createdAt.split("T")[0];
+      dailyMap[day] = (dailyMap[day] || 0) + 1;
+    }
+    const daily = Object.entries(dailyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, count]) => ({ day, count }));
 
     return NextResponse.json({
       todayCount,
       weekCount,
       monthCount,
       totalCount,
-      topPages: topPages.map((p) => ({
-        page: p.page,
-        count: p._count.id,
-      })),
+      topPages,
       devices: { mobile, desktop, tablet },
       daily,
     });

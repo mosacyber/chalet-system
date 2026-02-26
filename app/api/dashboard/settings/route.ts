@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rows = await prisma.siteSetting.findMany();
+  const rows = await db.siteSettings.findMany();
   const settings: Record<string, string> = {};
   for (const row of rows) {
     settings[row.key] = row.value;
@@ -37,11 +37,11 @@ export async function POST(request: Request) {
   const entries = Object.entries(body) as [string, string][];
 
   for (const [key, value] of entries) {
-    await prisma.siteSetting.upsert({
-      where: { key },
-      create: { key, value: String(value) },
-      update: { value: String(value) },
-    });
+    await db.siteSettings.upsert(
+      (s) => s.key === key,
+      { key, value: String(value) },
+      { value: String(value) }
+    );
   }
 
   return NextResponse.json({ message: "Settings saved" });

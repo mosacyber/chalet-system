@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -15,21 +15,41 @@ export async function GET() {
 
   const userId = (session.user as { id?: string }).id;
 
-  const ownerFilter =
-    role === "ADMIN"
-      ? {}
-      : { chalet: { ownerId: userId } };
+  let reviews;
 
-  const reviews = await prisma.review.findMany({
-    where: ownerFilter,
-    include: {
-      user: { select: { name: true } },
-      chalet: { select: { nameAr: true, nameEn: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  if (role === "ADMIN") {
+    reviews = await db.reviews.findMany();
+  } else {
+    // OWNER: only reviews for chalets they own
+    const ownerChalets = await db.chalets.findMany(
+      (c) => c.ownerId === userId
+    );
+    const ownerChaletIds = new Set(ownerChalets.map((c) => c.id));
+    reviews = await db.reviews.findMany((r) => ownerChaletIds.has(r.chaletId));
+  }
 
-  return NextResponse.json(reviews);
+  // Manual joins: attach user and chalet info
+  const users = await db.users.findMany();
+  const chalets = await db.chalets.findMany();
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+  const chaletMap = new Map(chalets.map((c) => [c.id, c]));
+
+  const result = reviews
+    .map((r) => {
+      const user = userMap.get(r.userId);
+      const chalet = chaletMap.get(r.chaletId);
+      return {
+        ...r,
+        user: user ? { name: user.name } : null,
+        chalet: chalet
+          ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn }
+          : null,
+      };
+    })
+    .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+  return NextResponse.json(result);
 }
 
 export async function PATCH(request: Request) {
@@ -50,10 +70,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
-  await prisma.review.update({
-    where: { id },
-    data: { isVisible },
-  });
+  await db.reviews.update(id, { isVisible });
 
   return NextResponse.json({ success: true });
 }
@@ -76,7 +93,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  await prisma.review.delete({ where: { id } });
+  await db.reviews.delete(id);
 
   return NextResponse.json({ success: true });
 }

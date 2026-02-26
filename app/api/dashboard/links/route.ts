@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -16,16 +16,14 @@ export async function GET() {
 
     const userId = (session.user as { id: string }).id;
 
-    const linkPage = await prisma.linkPage.findUnique({
-      where: { userId },
-      include: {
-        links: {
-          orderBy: { sortOrder: "asc" },
-        },
-      },
-    });
+    const linkPage = await db.linkPages.findFirst((p) => p.userId === userId);
+    if (linkPage) {
+      const links = await db.linkItems.findMany((l) => l.linkPageId === linkPage.id);
+      links.sort((a, b) => a.sortOrder - b.sortOrder);
+      return NextResponse.json({ ...linkPage, links });
+    }
 
-    return NextResponse.json(linkPage);
+    return NextResponse.json(null);
   } catch (error) {
     console.error("Links GET error:", error);
     return NextResponse.json(null);
@@ -66,9 +64,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingPage = await prisma.linkPage.findUnique({
-      where: { slug },
-    });
+    const existingPage = await db.linkPages.findFirst((p) => p.slug === slug);
     if (existingPage && existingPage.userId !== userId) {
       return NextResponse.json(
         { error: "Slug already taken" },
@@ -88,57 +84,47 @@ export async function POST(request: Request) {
       isPublished: isPublished ?? false,
     };
 
-    const result = await prisma.$transaction(async (tx) => {
-      const page = await tx.linkPage.upsert({
-        where: { userId },
-        create: { userId, ...pageData },
-        update: pageData,
-      });
+    const page = await db.linkPages.upsert(
+      (p) => p.userId === userId,
+      { userId, avatarUrl: null, ...pageData },
+      pageData
+    );
 
-      await tx.linkItem.deleteMany({
-        where: { linkPageId: page.id },
-      });
+    await db.linkItems.deleteMany((l) => l.linkPageId === page.id);
 
-      if (links && Array.isArray(links) && links.length > 0) {
-        await tx.linkItem.createMany({
-          data: links.map(
-            (
-              link: {
-                title: string;
-                url: string;
-                iconType?: string;
-                linkType?: string;
-                isActive?: boolean;
-                isFeatured?: boolean;
-                thumbnail?: string;
-              },
-              index: number
-            ) => ({
-              linkPageId: page.id,
-              title: link.title,
-              url: link.url || "",
-              iconType: link.iconType || "link",
-              linkType: link.linkType || "link",
-              sortOrder: index,
-              isActive: link.isActive ?? true,
-              isFeatured: link.isFeatured ?? false,
-              thumbnail: link.thumbnail || null,
-            })
-          ),
-        });
-      }
+    if (links && Array.isArray(links) && links.length > 0) {
+      await db.linkItems.createMany(
+        links.map(
+          (
+            link: {
+              title: string;
+              url: string;
+              iconType?: string;
+              linkType?: string;
+              isActive?: boolean;
+              isFeatured?: boolean;
+              thumbnail?: string;
+            },
+            index: number
+          ) => ({
+            linkPageId: page.id,
+            title: link.title,
+            url: link.url || "",
+            iconType: link.iconType || "link",
+            linkType: link.linkType || "link",
+            sortOrder: index,
+            isActive: link.isActive ?? true,
+            isFeatured: link.isFeatured ?? false,
+            thumbnail: link.thumbnail || null,
+          })
+        )
+      );
+    }
 
-      return tx.linkPage.findUnique({
-        where: { id: page.id },
-        include: {
-          links: {
-            orderBy: { sortOrder: "asc" },
-          },
-        },
-      });
-    });
+    const updatedLinks = await db.linkItems.findMany((l) => l.linkPageId === page.id);
+    updatedLinks.sort((a, b) => a.sortOrder - b.sortOrder);
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...page, links: updatedLinks });
   } catch (error) {
     console.error("Links POST error:", error);
     return NextResponse.json(

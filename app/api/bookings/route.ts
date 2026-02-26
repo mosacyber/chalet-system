@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -8,15 +8,28 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: { userId: session.user.id },
-    include: {
-      chalet: { select: { nameAr: true, nameEn: true, slug: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const userId = session.user.id!;
+  const bookings = await db.bookings.findMany(
+    (b) => b.userId === userId
+  );
 
-  return NextResponse.json(bookings);
+  // Manual join: attach chalet info
+  const chalets = await db.chalets.findMany();
+  const chaletMap = new Map(chalets.map((c) => [c.id, c]));
+
+  const result = bookings
+    .map((b) => {
+      const chalet = chaletMap.get(b.chaletId);
+      return {
+        ...b,
+        chalet: chalet
+          ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn, slug: chalet.slug }
+          : null,
+      };
+    })
+    .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
@@ -34,27 +47,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { id: body.chaletId },
-    select: { pricePerNight: true, weekendPrice: true },
-  });
+  const chalet = await db.chalets.findUnique(body.chaletId);
 
   if (!chalet) {
     return NextResponse.json({ error: "Chalet not found" }, { status: 404 });
   }
 
-  const checkIn = new Date(body.checkIn);
-  const checkOut = new Date(body.checkOut);
+  const checkIn = body.checkIn as string;
+  const checkOut = body.checkOut as string;
 
   // Check for overlapping bookings
-  const overlap = await prisma.booking.findFirst({
-    where: {
-      chaletId: body.chaletId,
-      status: { in: ["PENDING", "CONFIRMED"] },
-      checkIn: { lt: checkOut },
-      checkOut: { gt: checkIn },
-    },
-  });
+  const overlap = await db.bookings.findFirst(
+    (b) =>
+      b.chaletId === body.chaletId &&
+      (b.status === "PENDING" || b.status === "CONFIRMED") &&
+      b.checkIn < checkOut &&
+      b.checkOut > checkIn
+  );
 
   if (overlap) {
     return NextResponse.json(
@@ -66,7 +75,8 @@ export async function POST(request: Request) {
   // Calculate total price (weekend = Fri/Sat)
   let total = 0;
   const d = new Date(checkIn);
-  while (d < checkOut) {
+  const checkOutDate = new Date(checkOut);
+  while (d < checkOutDate) {
     const day = d.getDay();
     const isWeekend = day === 5 || day === 6;
     const price =
@@ -77,16 +87,22 @@ export async function POST(request: Request) {
     d.setDate(d.getDate() + 1);
   }
 
-  const booking = await prisma.booking.create({
-    data: {
-      userId: session.user.id!,
-      chaletId: body.chaletId,
-      checkIn,
-      checkOut,
-      guests: Number(body.guests),
-      totalPrice: total,
-      notes: body.notes || null,
-    },
+  const booking = await db.bookings.create({
+    userId: session.user.id!,
+    chaletId: body.chaletId,
+    checkIn,
+    checkOut,
+    guests: Number(body.guests),
+    totalPrice: total,
+    status: "PENDING",
+    notes: body.notes || null,
+    guestName: null,
+    guestPhone: null,
+    paymentMethod: null,
+    deposit: null,
+    remainingAmount: null,
+    remainingPaymentMethod: null,
+    remainingCollected: false,
   });
 
   return NextResponse.json(

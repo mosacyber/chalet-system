@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl =
@@ -31,10 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Dynamic chalets from database
   try {
-    const chalets = await prisma.chalet.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    });
+    const chalets = await db.chalets.findMany((c) => c.isActive);
 
     for (const locale of locales) {
       for (const chalet of chalets) {

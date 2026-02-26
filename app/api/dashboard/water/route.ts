@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -14,26 +14,49 @@ export async function GET() {
   }
 
   const isOwner = role === "OWNER";
-  const where = isOwner ? { chalet: { ownerId: session.user.id } } : {};
 
-  const expenses = await prisma.waterExpense.findMany({
-    where,
-    include: {
-      chalet: { select: { nameAr: true, nameEn: true } },
-    },
-    orderBy: { date: "desc" },
-  });
+  // Get owner's chalet IDs for filtering
+  let ownerChaletIds: string[] = [];
+  if (isOwner) {
+    const ownerChalets = await db.chalets.findMany(
+      (c) => c.ownerId === session.user!.id
+    );
+    ownerChaletIds = ownerChalets.map((c) => c.id);
+  }
+
+  const expenses = await db.waterExpenses.findMany(
+    isOwner
+      ? (e) => ownerChaletIds.includes(e.chaletId)
+      : undefined
+  );
+
+  // Manual join with chalets and sort by date desc
+  const expensesWithChalets = await Promise.all(
+    expenses.map(async (e) => {
+      const chalet = await db.chalets.findUnique(e.chaletId);
+      return {
+        ...e,
+        chalet: chalet
+          ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn }
+          : { nameAr: "", nameEn: "" },
+      };
+    })
+  );
+
+  const sorted = expensesWithChalets.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   return NextResponse.json(
-    expenses.map((e) => ({
+    sorted.map((e) => ({
       id: e.id,
       chaletId: e.chaletId,
       chaletNameAr: e.chalet.nameAr,
       chaletNameEn: e.chalet.nameEn,
       amount: Number(e.amount),
       notes: e.notes,
-      date: e.date.toISOString().split("T")[0],
-      createdAt: e.createdAt.toISOString(),
+      date: e.date.split("T")[0],
+      createdAt: e.createdAt,
     }))
   );
 }
@@ -58,21 +81,19 @@ export async function POST(request: Request) {
 
   // Verify ownership for OWNER
   if (role === "OWNER") {
-    const chalet = await prisma.chalet.findFirst({
-      where: { id: chaletId, ownerId: session.user.id },
-    });
+    const chalet = await db.chalets.findFirst(
+      (c) => c.id === chaletId && c.ownerId === session.user!.id
+    );
     if (!chalet) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
 
-  const expense = await prisma.waterExpense.create({
-    data: {
-      chaletId,
-      amount: Number(amount),
-      notes: notes || null,
-      date: date ? new Date(date + "T00:00:00Z") : new Date(),
-    },
+  const expense = await db.waterExpenses.create({
+    chaletId,
+    amount: Number(amount),
+    notes: notes || null,
+    date: date ? new Date(date + "T00:00:00Z").toISOString() : new Date().toISOString(),
   });
 
   return NextResponse.json({ id: expense.id, message: "Created" });
@@ -96,16 +117,17 @@ export async function DELETE(request: Request) {
 
   // Verify ownership for OWNER
   if (role === "OWNER") {
-    const expense = await prisma.waterExpense.findFirst({
-      where: { id },
-      include: { chalet: { select: { ownerId: true } } },
-    });
-    if (!expense || expense.chalet.ownerId !== session.user.id) {
+    const expense = await db.waterExpenses.findUnique(id);
+    if (!expense) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const chalet = await db.chalets.findUnique(expense.chaletId);
+    if (!chalet || chalet.ownerId !== session.user!.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
 
-  await prisma.waterExpense.delete({ where: { id } });
+  await db.waterExpenses.delete(id);
 
   return NextResponse.json({ message: "Deleted" });
 }

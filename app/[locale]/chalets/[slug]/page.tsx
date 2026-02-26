@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import ChaletDetail from "@/components/chalets/ChaletDetail";
 import JsonLd from "@/components/seo/JsonLd";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 
@@ -13,17 +13,7 @@ export async function generateMetadata({
   const { locale, slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
-    select: {
-      nameAr: true,
-      nameEn: true,
-      descriptionAr: true,
-      descriptionEn: true,
-      images: true,
-      isActive: true,
-    },
-  });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
 
   if (!chalet) return { title: "Not Found" };
 
@@ -63,15 +53,7 @@ export default async function ChaletPage({
   const slug = decodeURIComponent(rawSlug);
   setRequestLocale(locale);
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
-    include: {
-      reviews: {
-        where: { isVisible: true },
-        select: { rating: true },
-      },
-    },
-  });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
 
   if (!chalet) {
     notFound();
@@ -85,10 +67,13 @@ export default async function ChaletPage({
     }
   }
 
+  const reviews = await db.reviews.findMany(
+    (r) => r.chaletId === chalet.id && r.isVisible
+  );
+
   const avgRating =
-    chalet.reviews.length > 0
-      ? chalet.reviews.reduce((sum, r) => sum + r.rating, 0) /
-        chalet.reviews.length
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
 
   const chaletData = {
@@ -105,7 +90,7 @@ export default async function ChaletPage({
     bedrooms: chalet.bedrooms,
     bathrooms: chalet.bathrooms,
     rating: Math.round(avgRating * 10) / 10,
-    reviewCount: chalet.reviews.length,
+    reviewCount: reviews.length,
     amenities: chalet.amenities,
     locationAr: chalet.locationAr,
     locationEn: chalet.locationEn,

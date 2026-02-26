@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import type { Chalet, Booking, WaterExpense } from "@/lib/types";
 
 export async function GET() {
   try {
@@ -11,64 +12,83 @@ export async function GET() {
 
     const role = (session.user as { role?: string }).role;
     const isOwner = role === "OWNER";
-    const ownerFilter = isOwner ? { ownerId: session.user.id } : {};
-    const bookingFilter = isOwner
-      ? { chalet: { ownerId: session.user.id } }
-      : {};
-    const waterFilter = isOwner
-      ? { chalet: { ownerId: session.user.id } }
-      : {};
 
     if (role !== "ADMIN" && role !== "OWNER") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const [totalChalets, totalBookings, blockedBookings, recentBookings] =
+    // Get owner's chalet IDs for filtering
+    let ownerChaletIds: string[] = [];
+    if (isOwner) {
+      const ownerChalets = await db.chalets.findMany(
+        (c) => c.ownerId === session.user!.id
+      );
+      ownerChaletIds = ownerChalets.map((c) => c.id);
+    }
+
+    const userId = session.user!.id!;
+    const chaletFilter = isOwner
+      ? (c: Chalet) => c.ownerId === userId
+      : undefined;
+
+    const bookingFilter = isOwner
+      ? (b: Booking) =>
+          ownerChaletIds.includes(b.chaletId) && b.status === "BLOCKED"
+      : (b: Booking) => b.status === "BLOCKED";
+
+    const waterFilter = isOwner
+      ? (e: WaterExpense) => ownerChaletIds.includes(e.chaletId)
+      : undefined;
+
+    const [totalChalets, blockedBookings, allBlockedBookings] =
       await Promise.all([
-        prisma.chalet.count({ where: ownerFilter }),
-        prisma.booking.count({
-          where: { ...bookingFilter, status: "BLOCKED" },
-        }),
-        prisma.booking.findMany({
-          where: { ...bookingFilter, status: "BLOCKED" },
-          select: {
-            deposit: true,
-            remainingAmount: true,
-            paymentMethod: true,
-          },
-        }),
-        prisma.booking.findMany({
-          where: { ...bookingFilter, status: "BLOCKED" },
-          include: {
-            user: { select: { name: true } },
-            chalet: { select: { nameAr: true, nameEn: true } },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-        }),
+        db.chalets.count(chaletFilter),
+        db.bookings.findMany(bookingFilter),
+        db.bookings.findMany(bookingFilter),
       ]);
 
+    const totalBookings = blockedBookings.length;
+
+    // Get recent 5 BLOCKED bookings with user and chalet info
+    const sortedBookings = allBlockedBookings.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    const recent5 = sortedBookings.slice(0, 5);
+
+    // Manual joins for recent bookings
+    const recentBookings = await Promise.all(
+      recent5.map(async (b) => {
+        const user = b.userId ? await db.users.findUnique(b.userId) : null;
+        const chalet = await db.chalets.findUnique(b.chaletId);
+        return {
+          ...b,
+          user: user ? { name: user.name } : null,
+          chalet: chalet
+            ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn }
+            : { nameAr: "", nameEn: "" },
+        };
+      })
+    );
+
     // Water expenses and settings - wrapped in try/catch for graceful fallback
-    let waterResult: { _sum: { amount: unknown } } = { _sum: { amount: 0 } };
+    let waterTotal = 0;
     let settings: { key: string; value: string }[] = [];
     try {
-      [waterResult, settings] = await Promise.all([
-        prisma.waterExpense.aggregate({
-          where: waterFilter,
-          _sum: { amount: true },
-        }),
-        prisma.siteSetting.findMany({
-          where: {
-            key: {
-              in: [
-                "payment_cash_location",
-                "payment_card_location",
-                "payment_transfer_location",
-              ],
-            },
-          },
-        }),
+      const [expenses, settingsResult] = await Promise.all([
+        db.waterExpenses.findMany(waterFilter),
+        db.siteSettings.findMany(
+          (s) =>
+            s.key === "payment_cash_location" ||
+            s.key === "payment_card_location" ||
+            s.key === "payment_transfer_location"
+        ),
       ]);
+      waterTotal = expenses.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0
+      );
+      settings = settingsResult;
     } catch {
       // Table may not exist yet - graceful fallback
     }
@@ -88,8 +108,6 @@ export async function GET() {
         breakdown[method] += amount;
       }
     }
-
-    const waterTotal = Number(waterResult._sum.amount || 0);
 
     // Payment locations from settings
     const paymentLocations: Record<string, string> = {};
@@ -116,7 +134,7 @@ export async function GET() {
         customer: b.guestName || b.user?.name || "-",
         chaletAr: b.chalet.nameAr,
         chaletEn: b.chalet.nameEn,
-        date: b.checkIn.toISOString().split("T")[0],
+        date: b.checkIn.split("T")[0],
         status: b.status.toLowerCase(),
         amount: Number(b.deposit || 0) + Number(b.remainingAmount || 0),
       })),

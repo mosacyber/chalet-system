@@ -37,7 +37,7 @@ export function getLogs(filter?: {
     result = result.filter((l) => l.level === filter.level);
   }
   if (filter?.source) {
-    result = result.filter((l) => l.source.includes(filter.source));
+    result = result.filter((l) => l.source.includes(filter.source!));
   }
   const limit = filter?.limit || 200;
   return result.slice(-limit).reverse();

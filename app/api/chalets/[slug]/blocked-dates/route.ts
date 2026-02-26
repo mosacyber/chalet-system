@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 async function getSessionAndChalet(slug: string) {
   const session = await auth();
@@ -13,10 +13,7 @@ async function getSessionAndChalet(slug: string) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
-    select: { id: true, ownerId: true },
-  });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
 
   if (!chalet) {
     return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
@@ -40,42 +37,30 @@ export async function GET(
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString();
 
-  const blocked = await prisma.booking.findMany({
-    where: {
-      chaletId: result.chalet.id,
-      status: "BLOCKED",
-      checkOut: { gte: today },
-    },
-    select: {
-      id: true,
-      checkIn: true,
-      checkOut: true,
-      guestName: true,
-      guestPhone: true,
-      paymentMethod: true,
-      deposit: true,
-      remainingAmount: true,
-      remainingPaymentMethod: true,
-      remainingCollected: true,
-      createdAt: true,
-    },
-    orderBy: { checkIn: "asc" },
-  });
+  const blocked = await db.bookings.findMany(
+    (b) =>
+      b.chaletId === result.chalet.id &&
+      b.status === "BLOCKED" &&
+      b.checkOut >= todayStr
+  );
 
-  const data = blocked.map((b) => ({
-    id: b.id,
-    date: b.checkIn.toISOString().split("T")[0],
-    checkOut: b.checkOut.toISOString().split("T")[0],
-    guestName: b.guestName || "",
-    guestPhone: b.guestPhone || "",
-    paymentMethod: b.paymentMethod || "",
-    deposit: b.deposit ? Number(b.deposit) : 0,
-    remainingAmount: b.remainingAmount ? Number(b.remainingAmount) : 0,
-    remainingPaymentMethod: b.remainingPaymentMethod || "",
-    remainingCollected: b.remainingCollected || false,
-    createdAt: b.createdAt.toISOString(),
-  }));
+  const data = blocked
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
+    .map((b) => ({
+      id: b.id,
+      date: b.checkIn.split("T")[0],
+      checkOut: b.checkOut.split("T")[0],
+      guestName: b.guestName || "",
+      guestPhone: b.guestPhone || "",
+      paymentMethod: b.paymentMethod || "",
+      deposit: b.deposit ? Number(b.deposit) : 0,
+      remainingAmount: b.remainingAmount ? Number(b.remainingAmount) : 0,
+      remainingPaymentMethod: b.remainingPaymentMethod || "",
+      remainingCollected: b.remainingCollected || false,
+      createdAt: b.createdAt,
+    }));
 
   return NextResponse.json(data);
 }
@@ -102,19 +87,21 @@ export async function POST(
   }
 
   // Check which dates are already booked/blocked
-  const existingBookings = await prisma.booking.findMany({
-    where: {
-      chaletId: result.chalet.id,
-      status: { in: ["PENDING", "CONFIRMED", "BLOCKED"] },
-    },
-    select: { checkIn: true, checkOut: true },
-  });
+  const existingBookings = await db.bookings.findMany(
+    (b) =>
+      b.chaletId === result.chalet.id &&
+      ["PENDING", "CONFIRMED", "BLOCKED"].includes(b.status)
+  );
 
   const occupiedDates = new Set<string>();
   for (const b of existingBookings) {
     const d = new Date(b.checkIn);
-    while (d < b.checkOut) {
-      occupiedDates.add(d.toISOString().split("T")[0]);
+    const end = new Date(b.checkOut);
+    while (d < end) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      occupiedDates.add(`${year}-${month}-${day}`);
       d.setDate(d.getDate() + 1);
     }
   }
@@ -133,8 +120,8 @@ export async function POST(
     return {
       userId: result.user.id,
       chaletId: result.chalet.id,
-      checkIn,
-      checkOut,
+      checkIn: checkIn.toISOString(),
+      checkOut: checkOut.toISOString(),
       guests: 0,
       totalPrice: 0,
       status: "BLOCKED" as const,
@@ -144,10 +131,12 @@ export async function POST(
       paymentMethod: paymentMethod || null,
       deposit: deposit || null,
       remainingAmount: remainingAmount || null,
+      remainingPaymentMethod: null,
+      remainingCollected: false,
     };
   });
 
-  await prisma.booking.createMany({ data: bookings });
+  await db.bookings.createMany(bookings);
 
   return NextResponse.json({ message: "Dates blocked", created: newDates.length });
 }
@@ -168,32 +157,28 @@ export async function PATCH(
     return NextResponse.json({ error: "bookingId required" }, { status: 400 });
   }
 
-  const booking = await prisma.booking.findFirst({
-    where: {
-      id: bookingId,
-      chaletId: result.chalet.id,
-      status: "BLOCKED",
-    },
-  });
+  const booking = await db.bookings.findFirst(
+    (b) =>
+      b.id === bookingId &&
+      b.chaletId === result.chalet.id &&
+      b.status === "BLOCKED"
+  );
 
   if (!booking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  const updated = await prisma.booking.update({
-    where: { id: bookingId },
-    data: {
-      remainingAmount: remainingAmount ?? 0,
-      remainingPaymentMethod: remainingPaymentMethod || null,
-      remainingCollected: !!remainingPaymentMethod,
-    },
+  const updated = await db.bookings.update(bookingId, {
+    remainingAmount: remainingAmount ?? 0,
+    remainingPaymentMethod: remainingPaymentMethod || null,
+    remainingCollected: !!remainingPaymentMethod,
   });
 
   return NextResponse.json({
     message: "Updated successfully",
-    remainingAmount: updated.remainingAmount ? Number(updated.remainingAmount) : 0,
-    remainingPaymentMethod: updated.remainingPaymentMethod || "",
-    remainingCollected: updated.remainingCollected,
+    remainingAmount: updated?.remainingAmount ? Number(updated.remainingAmount) : 0,
+    remainingPaymentMethod: updated?.remainingPaymentMethod || "",
+    remainingCollected: updated?.remainingCollected,
   });
 }
 
@@ -215,15 +200,14 @@ export async function DELETE(
 
   let deleted = 0;
   for (const date of dates) {
-    const checkIn = new Date(date + "T00:00:00Z");
-    const result2 = await prisma.booking.deleteMany({
-      where: {
-        chaletId: result.chalet.id,
-        status: "BLOCKED",
-        checkIn: checkIn,
-      },
-    });
-    deleted += result2.count;
+    const checkInStr = new Date(date + "T00:00:00Z").toISOString();
+    const count = await db.bookings.deleteMany(
+      (b) =>
+        b.chaletId === result.chalet.id &&
+        b.status === "BLOCKED" &&
+        b.checkIn === checkInStr
+    );
+    deleted += count;
   }
 
   return NextResponse.json({ message: "Dates unblocked", deleted });

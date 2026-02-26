@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET(
   _request: Request,
@@ -8,21 +8,22 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const linkPage = await prisma.linkPage.findUnique({
-      where: { slug, isPublished: true },
-      include: {
-        links: {
-          where: { isActive: true },
-          orderBy: { sortOrder: "asc" },
-        },
-      },
-    });
+    const linkPage = await db.linkPages.findFirst(
+      (p) => p.slug === slug && p.isPublished
+    );
 
     if (!linkPage) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json(linkPage);
+    const links = await db.linkItems.findMany(
+      (l) => l.linkPageId === linkPage.id && l.isActive
+    );
+
+    // Sort by sortOrder ascending
+    links.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    return NextResponse.json({ ...linkPage, links });
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

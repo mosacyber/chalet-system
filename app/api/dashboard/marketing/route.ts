@@ -1,43 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 const BUILD_VERSION = "v2-baileys";
-
-// Ensure WhatsAppSession table exists (runs once)
-let tableEnsured = false;
-async function ensureTable() {
-  if (tableEnsured) return;
-  try {
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "WhatsAppSession" (
-        "id" TEXT NOT NULL,
-        "userId" TEXT NOT NULL,
-        "phone" TEXT NOT NULL,
-        "instanceId" TEXT,
-        "status" TEXT NOT NULL DEFAULT 'disconnected',
-        "lastConnectedAt" TIMESTAMP(3),
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "WhatsAppSession_pkey" PRIMARY KEY ("id")
-      )
-    `);
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "WhatsAppSession_userId_key" ON "WhatsAppSession"("userId")
-    `);
-    try {
-      await prisma.$executeRawUnsafe(`
-        ALTER TABLE "WhatsAppSession" ADD CONSTRAINT "WhatsAppSession_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
-      `);
-    } catch {
-      // FK already exists
-    }
-    tableEnsured = true;
-  } catch (err) {
-    console.error("[marketing] ensureTable error:", err);
-  }
-}
 
 export async function GET() {
   try {
@@ -56,12 +21,7 @@ export async function GET() {
       return NextResponse.json({ error: "No user ID" }, { status: 400 });
     }
 
-    // Create table if needed BEFORE querying
-    await ensureTable();
-
-    const whatsapp = await prisma.whatsAppSession.findUnique({
-      where: { userId },
-    });
+    const whatsapp = await db.whatsappSessions.findFirst((w) => w.userId === userId);
     return NextResponse.json(whatsapp);
   } catch (error) {
     console.error("Marketing GET error:", error);
@@ -100,18 +60,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create table if needed BEFORE writing
-    await ensureTable();
-
-    const whatsapp = await prisma.whatsAppSession.upsert({
-      where: { userId },
-      update: { phone: phone.trim() },
-      create: {
+    const whatsapp = await db.whatsappSessions.upsert(
+      (w) => w.userId === userId,
+      {
         userId,
         phone: phone.trim(),
         status: "disconnected",
+        instanceId: null,
+        lastConnectedAt: null,
       },
-    });
+      { phone: phone.trim() }
+    );
     return NextResponse.json(whatsapp);
   } catch (error) {
     console.error("Marketing POST error:", error);

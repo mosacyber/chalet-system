@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import {
   startWhatsAppSession,
   getSessionInfo,
@@ -22,9 +22,7 @@ export async function POST() {
 
     const userId = (session.user as { id: string }).id;
 
-    const whatsapp = await prisma.whatsAppSession.findUnique({
-      where: { userId },
-    });
+    const whatsapp = await db.whatsappSessions.findFirst((w) => w.userId === userId);
 
     if (!whatsapp) {
       return NextResponse.json(
@@ -40,9 +38,9 @@ export async function POST() {
       // Check if already connected (no QR needed)
       const info = getSessionInfo(userId);
       if (info.status === "connected") {
-        await prisma.whatsAppSession.update({
-          where: { userId },
-          data: { status: "connected", lastConnectedAt: new Date() },
+        await db.whatsappSessions.update(whatsapp.id, {
+          status: "connected",
+          lastConnectedAt: new Date().toISOString(),
         });
         return NextResponse.json({ status: "connected", qrCode: null });
       }
@@ -52,10 +50,7 @@ export async function POST() {
       );
     }
 
-    await prisma.whatsAppSession.update({
-      where: { userId },
-      data: { status: "qr_pending" },
-    });
+    await db.whatsappSessions.update(whatsapp.id, { status: "qr_pending" });
 
     return NextResponse.json({
       qrCode,
@@ -92,19 +87,14 @@ export async function GET() {
     const info = getSessionInfo(userId);
 
     // Update DB if status changed
-    const whatsapp = await prisma.whatsAppSession.findUnique({
-      where: { userId },
-    });
+    const whatsapp = await db.whatsappSessions.findFirst((w) => w.userId === userId);
 
     if (whatsapp && whatsapp.status !== info.status) {
-      await prisma.whatsAppSession.update({
-        where: { userId },
-        data: {
-          status: info.status,
-          ...(info.status === "connected"
-            ? { lastConnectedAt: new Date() }
-            : {}),
-        },
+      await db.whatsappSessions.update(whatsapp.id, {
+        status: info.status,
+        ...(info.status === "connected"
+          ? { lastConnectedAt: new Date().toISOString() }
+          : {}),
       });
     }
 
@@ -137,13 +127,13 @@ export async function DELETE() {
     await disconnectWhatsApp(userId);
 
     // Update DB
-    await prisma.whatsAppSession.update({
-      where: { userId },
-      data: {
+    const whatsapp = await db.whatsappSessions.findFirst((w) => w.userId === userId);
+    if (whatsapp) {
+      await db.whatsappSessions.update(whatsapp.id, {
         status: "disconnected",
         instanceId: null,
-      },
-    });
+      });
+    }
 
     return NextResponse.json({ status: "disconnected" });
   } catch (error) {

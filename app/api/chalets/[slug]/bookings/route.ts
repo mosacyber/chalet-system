@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET(
   _request: Request,
@@ -7,10 +7,7 @@ export async function GET(
 ) {
   const { slug } = await params;
 
-  const chalet = await prisma.chalet.findUnique({
-    where: { slug },
-    select: { id: true },
-  });
+  const chalet = await db.chalets.findFirst((c) => c.slug === slug);
 
   if (!chalet) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -18,24 +15,21 @@ export async function GET(
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString();
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      chaletId: chalet.id,
-      status: { in: ["PENDING", "CONFIRMED", "BLOCKED"] },
-      checkOut: { gte: today },
-    },
-    select: {
-      checkIn: true,
-      checkOut: true,
-    },
-    orderBy: { checkIn: "asc" },
-  });
+  const bookings = await db.bookings.findMany(
+    (b) =>
+      b.chaletId === chalet.id &&
+      ["PENDING", "CONFIRMED", "BLOCKED"].includes(b.status) &&
+      b.checkOut >= todayStr
+  );
 
-  const result = bookings.map((b) => ({
-    checkIn: b.checkIn.toISOString().split("T")[0],
-    checkOut: b.checkOut.toISOString().split("T")[0],
-  }));
+  const result = bookings
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
+    .map((b) => ({
+      checkIn: b.checkIn.split("T")[0],
+      checkOut: b.checkOut.split("T")[0],
+    }));
 
   return NextResponse.json(result);
 }

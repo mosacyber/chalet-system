@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -15,48 +15,52 @@ export async function GET(request: Request) {
     const role = (session.user as { role?: string }).role;
 
     if (role === "ADMIN") {
-      const chalets = await prisma.chalet.findMany({
-        orderBy: { createdAt: "desc" },
-        include: { _count: { select: { bookings: true } } },
-      });
-      return NextResponse.json(chalets);
+      const chalets = await db.chalets.findMany();
+      const result = await Promise.all(
+        chalets
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .map(async (c) => {
+            const bookingCount = await db.bookings.count((b) => b.chaletId === c.id);
+            return { ...c, _count: { bookings: bookingCount } };
+          })
+      );
+      return NextResponse.json(result);
     }
 
     if (role === "OWNER") {
-      const chalets = await prisma.chalet.findMany({
-        where: { ownerId: session.user.id },
-        orderBy: { createdAt: "desc" },
-        include: { _count: { select: { bookings: true } } },
-      });
-      return NextResponse.json(chalets);
+      const chalets = await db.chalets.findMany((c) => c.ownerId === session.user!.id);
+      const result = await Promise.all(
+        chalets
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .map(async (c) => {
+            const bookingCount = await db.bookings.count((b) => b.chaletId === c.id);
+            return { ...c, _count: { bookings: bookingCount } };
+          })
+      );
+      return NextResponse.json(result);
     }
 
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Public: only active chalets with review stats
-  const chalets = await prisma.chalet.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: "desc" },
-    include: {
-      reviews: { where: { isVisible: true }, select: { rating: true } },
-    },
-  });
+  const chalets = await db.chalets.findMany((c) => c.isActive);
+  const allReviews = await db.reviews.findMany((r) => r.isVisible);
 
-  const result = chalets.map((c) => {
-    const avgRating =
-      c.reviews.length > 0
-        ? c.reviews.reduce((sum, r) => sum + r.rating, 0) / c.reviews.length
-        : 0;
-    const { reviews, ...rest } = c;
-    return {
-      ...rest,
-      pricePerNight: Number(c.pricePerNight),
-      weekendPrice: c.weekendPrice ? Number(c.weekendPrice) : null,
-      rating: Math.round(avgRating * 10) / 10,
-      reviewCount: reviews.length,
-    };
-  });
+  const result = chalets
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map((c) => {
+      const chaletReviews = allReviews.filter((r) => r.chaletId === c.id);
+      const avgRating =
+        chaletReviews.length > 0
+          ? chaletReviews.reduce((sum, r) => sum + r.rating, 0) / chaletReviews.length
+          : 0;
+      return {
+        ...c,
+        rating: Math.round(avgRating * 10) / 10,
+        reviewCount: chaletReviews.length,
+      };
+    });
 
   return NextResponse.json(result);
 }
@@ -78,25 +82,25 @@ export async function POST(request: Request) {
     "-" +
     Date.now().toString(36);
 
-  const chalet = await prisma.chalet.create({
-    data: {
-      nameAr: body.nameAr,
-      nameEn: body.nameEn || body.nameAr,
-      slug,
-      ownerId: role === "OWNER" ? session.user.id : body.ownerId || null,
-      descriptionAr: body.descriptionAr || "",
-      descriptionEn: body.descriptionEn || "",
-      images: body.images || [],
-      amenities: body.amenities || [],
-      capacity: body.capacity || 0,
-      bedrooms: body.bedrooms || 0,
-      bathrooms: body.bathrooms || 0,
-      pricePerNight: body.pricePerNight || 0,
-      weekendPrice: body.weekendPrice || null,
-      locationAr: body.locationAr || "",
-      locationEn: body.locationEn || "",
-      isActive: false,
-    },
+  const chalet = await db.chalets.create({
+    nameAr: body.nameAr,
+    nameEn: body.nameEn || body.nameAr,
+    slug,
+    ownerId: role === "OWNER" ? session.user!.id : body.ownerId || null,
+    descriptionAr: body.descriptionAr || "",
+    descriptionEn: body.descriptionEn || "",
+    images: body.images || [],
+    amenities: body.amenities || [],
+    capacity: body.capacity || 0,
+    bedrooms: body.bedrooms || 0,
+    bathrooms: body.bathrooms || 0,
+    pricePerNight: body.pricePerNight || 0,
+    weekendPrice: body.weekendPrice || null,
+    locationAr: body.locationAr || "",
+    locationEn: body.locationEn || "",
+    latitude: null,
+    longitude: null,
+    isActive: false,
   });
 
   return NextResponse.json(

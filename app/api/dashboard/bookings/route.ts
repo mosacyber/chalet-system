@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -8,29 +8,64 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = (session.user as { role?: string }).role;
+  const user = session.user;
+  const role = (user as { role?: string }).role;
 
   if (role === "ADMIN") {
-    const bookings = await prisma.booking.findMany({
-      include: {
-        user: { select: { name: true } },
-        chalet: { select: { nameAr: true, nameEn: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(bookings);
+    const bookings = await db.bookings.findMany();
+    const users = await db.users.findMany();
+    const chalets = await db.chalets.findMany();
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const chaletMap = new Map(chalets.map((c) => [c.id, c]));
+
+    const result = bookings
+      .map((b) => {
+        const user = userMap.get(b.userId);
+        const chalet = chaletMap.get(b.chaletId);
+        return {
+          ...b,
+          user: user ? { name: user.name } : null,
+          chalet: chalet
+            ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn }
+            : null,
+        };
+      })
+      .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+    return NextResponse.json(result);
   }
 
   if (role === "OWNER") {
-    const bookings = await prisma.booking.findMany({
-      where: { chalet: { ownerId: session.user.id } },
-      include: {
-        user: { select: { name: true } },
-        chalet: { select: { nameAr: true, nameEn: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(bookings);
+    // Get chalets owned by this user
+    const ownerChalets = await db.chalets.findMany(
+      (c) => c.ownerId === user.id
+    );
+    const ownerChaletIds = new Set(ownerChalets.map((c) => c.id));
+
+    const bookings = await db.bookings.findMany((b) =>
+      ownerChaletIds.has(b.chaletId)
+    );
+
+    const users = await db.users.findMany();
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const chaletMap = new Map(ownerChalets.map((c) => [c.id, c]));
+
+    const result = bookings
+      .map((b) => {
+        const user = userMap.get(b.userId);
+        const chalet = chaletMap.get(b.chaletId);
+        return {
+          ...b,
+          user: user ? { name: user.name } : null,
+          chalet: chalet
+            ? { nameAr: chalet.nameAr, nameEn: chalet.nameEn }
+            : null,
+        };
+      })
+      .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+    return NextResponse.json(result);
   }
 
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });

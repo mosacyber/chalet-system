@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function GET() {
   const session = await auth();
@@ -10,13 +10,17 @@ export async function GET() {
 
   const userId = (session.user as { id?: string }).id;
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const notifications = await db.notifications.findMany(
+    (n) => n.userId === userId
+  );
 
-  return NextResponse.json(notifications);
+  // Sort by createdAt descending and limit to 50
+  notifications.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const limited = notifications.slice(0, 50);
+
+  return NextResponse.json(limited);
 }
 
 export async function PATCH(request: Request) {
@@ -29,10 +33,10 @@ export async function PATCH(request: Request) {
 
   if (body.markAllRead) {
     const userId = (session.user as { id?: string }).id;
-    await prisma.notification.updateMany({
-      where: { userId, isRead: false },
-      data: { isRead: true },
-    });
+    await db.notifications.updateMany(
+      (n) => n.userId === userId && !n.isRead,
+      { isRead: true }
+    );
     return NextResponse.json({ success: true });
   }
 
@@ -41,10 +45,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  await prisma.notification.update({
-    where: { id },
-    data: { isRead: isRead ?? true },
-  });
+  await db.notifications.update(id, { isRead: isRead ?? true });
 
   return NextResponse.json({ success: true });
 }

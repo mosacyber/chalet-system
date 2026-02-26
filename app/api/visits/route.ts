@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +15,7 @@ export async function POST(request: Request) {
       request.headers.get("x-real-ip") ||
       null;
 
-    await prisma.visit.create({
-      data: { page, userAgent, referrer, ip },
-    });
+    await db.visits.create({ page, userAgent, referrer, ip });
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -5,17 +5,13 @@ RUN apk add --no-cache openssl
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY prisma ./prisma
 RUN npm install --legacy-peer-deps
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-RUN npx prisma generate
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 RUN npm run build
@@ -34,12 +30,11 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 RUN mkdir -p /app/public/uploads && chown nextjs:nodejs /app/public/uploads
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 RUN mkdir -p /app/data/whatsapp-sessions && chown nextjs:nodejs /app/data/whatsapp-sessions
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/messages ./messages
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/@whiskeysockets ./node_modules/@whiskeysockets
 COPY --from=builder /app/node_modules/libsignal ./node_modules/libsignal
 COPY --from=builder /app/node_modules/qrcode ./node_modules/qrcode
@@ -50,7 +45,6 @@ COPY --from=builder /app/node_modules/async-mutex ./node_modules/async-mutex
 COPY --from=builder /app/node_modules/music-metadata ./node_modules/music-metadata
 COPY --from=builder /app/node_modules/p-queue ./node_modules/p-queue
 COPY --from=builder /app/node_modules/@cacheable ./node_modules/@cacheable
-COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
 EXPOSE 3000

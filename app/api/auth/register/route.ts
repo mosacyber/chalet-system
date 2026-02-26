@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { registerSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -18,9 +18,9 @@ export async function POST(request: Request) {
     const { name, phone, password, chaletName } = result.data;
     const email = result.data.email.toLowerCase().trim();
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser = await db.users.findFirst(
+      (u) => u.email === email
+    );
 
     if (existingUser) {
       return NextResponse.json(
@@ -31,45 +31,47 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(password, 12);
 
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          name,
-          email,
-          phone: phone || null,
-          password: hashedPassword,
-          role: "OWNER",
-        },
-        select: { id: true, name: true, email: true, role: true },
-      });
-
-      const slug =
-        chaletName.trim().replace(/\s+/g, "-") +
-        "-" +
-        newUser.id.slice(0, 6);
-
-      await tx.chalet.create({
-        data: {
-          nameAr: chaletName,
-          nameEn: chaletName,
-          slug,
-          ownerId: newUser.id,
-          descriptionAr: "",
-          descriptionEn: "",
-          images: [],
-          amenities: [],
-          capacity: 0,
-          bedrooms: 0,
-          bathrooms: 0,
-          pricePerNight: 0,
-          locationAr: "",
-          locationEn: "",
-          isActive: false,
-        },
-      });
-
-      return newUser;
+    const newUser = await db.users.create({
+      name,
+      email,
+      phone: phone || null,
+      password: hashedPassword,
+      role: "OWNER" as const,
+      image: null,
     });
+
+    const slug =
+      chaletName.trim().replace(/\s+/g, "-") +
+      "-" +
+      newUser.id.slice(0, 6);
+
+    await db.chalets.create({
+      nameAr: chaletName,
+      nameEn: chaletName,
+      slug,
+      ownerId: newUser.id,
+      descriptionAr: "",
+      descriptionEn: "",
+      images: [],
+      amenities: [],
+      capacity: 0,
+      bedrooms: 0,
+      bathrooms: 0,
+      pricePerNight: 0,
+      weekendPrice: null,
+      locationAr: "",
+      locationEn: "",
+      latitude: null,
+      longitude: null,
+      isActive: false,
+    });
+
+    const user = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+    };
 
     return NextResponse.json(
       { message: "تم إنشاء الحساب بنجاح", user },
