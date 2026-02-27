@@ -34,4 +34,9 @@ export const db = {
 };
 
 // Initialize database on first import
-initDb().catch((e) => console.error("[db] init error:", e));
+initDb()
+  .then(() => {
+    // Clear cache after init since db-init writes directly to files
+    db.users.invalidateCache();
+  })
+  .catch((e) => console.error("[db] init error:", e));

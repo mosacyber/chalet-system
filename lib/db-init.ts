@@ -39,30 +39,39 @@ export async function initDb() {
     }
   }
 
-  // Seed default admin account
+  // Seed default admin account (recreate on every deploy to ensure valid password)
   const usersPath = path.join(DATA_DIR, "users.json");
   try {
     const users = JSON.parse(fs.readFileSync(usersPath, "utf-8") || "[]");
-    const adminExists = users.some(
+    const adminIndex = users.findIndex(
       (u: { email: string }) => u.email === "admin@chalets.com"
     );
-    if (!adminExists) {
-      const hashedPassword = await hash("Admin@123", 12);
-      const now = new Date().toISOString();
-      users.push({
-        id: "admin-default-001",
-        name: "مدير النظام",
-        email: "admin@chalets.com",
-        phone: null,
-        password: hashedPassword,
-        role: "ADMIN",
-        image: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), "utf-8");
+
+    const hashedPassword = await hash("Admin@123", 12);
+    const now = new Date().toISOString();
+
+    const adminData = {
+      id: "admin-default-001",
+      name: "مدير النظام",
+      email: "admin@chalets.com",
+      phone: null,
+      password: hashedPassword,
+      role: "ADMIN",
+      image: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (adminIndex >= 0) {
+      // Update existing admin with fresh password hash
+      users[adminIndex] = { ...users[adminIndex], password: hashedPassword, updatedAt: now };
+      console.log("[db-init] Admin password refreshed");
+    } else {
+      users.push(adminData);
       console.log("[db-init] Default admin account created");
     }
+
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), "utf-8");
   } catch (err) {
     console.error("[db-init] Error seeding admin:", err);
   }
